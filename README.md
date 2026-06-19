@@ -1,6 +1,6 @@
 # fix-cron — fix GHA cron rot
 
-Two small, tested tools plus this design doc.
+Two small, tested Go tools plus this design doc.
 
 They make GitHub Actions crons durable and observable.
 
@@ -32,16 +32,16 @@ Source: `github.com/stefanpenner-cs/cron-debugging`, `../who_owns_cron.md`.
 
 ## The fix: two pillars
 
-### Pillar A — durable ownership (`rehome/`)
+### Pillar A — durable ownership (`cmd/rehome`)
 
 Move a fragile cron onto a durable service/bot account.
 
 The trick: edit the `cron:` value in a way that does not change when it
-runs. `lib/cron_equiv.py` rewrites the expression to an equal-but-different
+runs. `internal/cronequiv` rewrites the expression to an equal-but-different
 string (for example `0 9 * * *` → `0 9 * 1-12 *`). That real edit moves the
 actor; the schedule stays identical.
 
-`rehome/plan_rehome.py`:
+`cmd/rehome`:
 
 - Reads the cron inventory and the last actual `schedule` run per file.
 - Picks crons whose run-actor needs re-homing
@@ -55,11 +55,11 @@ To actually move the actor later, land each edit as a durable account
 (svc-* or `li-cron[bot]`) via squash or merge-commit. Never rebase-merge —
 that keeps the old author.
 
-### Pillar B — observability (`deadman/`)
+### Pillar B — observability (`cmd/deadman`)
 
 Catch crons that have silently stopped.
 
-`deadman/check_crons.py`:
+`cmd/deadman`:
 
 - Reads the inventory and the last `schedule` run per file.
 - Compares expected cadence (from the cron expression) against days since
@@ -68,7 +68,7 @@ Catch crons that have silently stopped.
   - `never_fired` — no scheduled run on record.
   - `stale` — missed roughly three expected fires (floored at 14 days).
 - Prints a worst-first table and can write JSON.
-- The alert step is one `emit()` function, so a Slack or GitHub-issue sink
+- The alert step is one `Emit()` function, so a Slack or GitHub-issue sink
   can drop in later.
 
 ## Data flow
@@ -81,7 +81,7 @@ scripts/cron_last_runs.py   ->  data/cron/linkedin-actions/last_runs.json
                                         |
                  +----------------------+----------------------+
                  v                                             v
-        deadman/check_crons.py                        rehome/plan_rehome.py
+            cmd/deadman                                    cmd/rehome
         (missed / dead report)                        (dry-run re-home plan)
 ```
 
@@ -89,29 +89,37 @@ scripts/cron_last_runs.py   ->  data/cron/linkedin-actions/last_runs.json
 
 ```
 fix-cron/
-  lib/
-    cron_schedule.py   cadence + staleness (interval_days, firing_label, health)
-    cron_equiv.py      schedule-neutral cron rewriter
-    actor.py           run-actor durability classifier
-  deadman/
-    check_crons.py     deadman / health check
-  rehome/
-    plan_rehome.py     dry-run re-home planner
+  go.mod                       module fixcron
+  internal/
+    cronsched/   cadence + staleness (IntervalDays, FiringLabel, Health)
+    cronequiv/   schedule-neutral cron rewriter (Rewrite)
+    actor/       run-actor durability classifier (Class, NeedsRehome)
+    inventory/   crons.json / last_runs.json types + loaders
+    deadman/     deadman assessment (CollapseFiles, Assess, Missed, Emit)
+    rehome/      dry-run re-home planner (Plan, Emit)
+  cmd/
+    deadman/     deadman CLI
+    rehome/      re-home CLI
 ```
 
-Each module has a sibling `test_*.py`. Python + pytest (repo standard).
+Each package has a sibling `*_test.go`. Go's built-in `testing`.
 
 ## Run it
 
-```
-python3 fix-cron/deadman/check_crons.py
-python3 fix-cron/deadman/check_crons.py --json-out reports/cron/deadman.json
+Run from this `fix-cron/` directory:
 
-python3 fix-cron/rehome/plan_rehome.py
-python3 fix-cron/rehome/plan_rehome.py --json-out reports/cron/rehome_plan.json
-
-pytest fix-cron/
 ```
+go run ./cmd/deadman
+go run ./cmd/deadman --json-out ../reports/cron/deadman.json
+
+go run ./cmd/rehome
+go run ./cmd/rehome --json-out ../reports/cron/rehome_plan.json
+
+go test ./...
+```
+
+The tools default to `../data/cron/linkedin-actions/{crons,last_runs}.json`.
+Override with `--crons` / `--last-runs`.
 
 ## Safety
 
