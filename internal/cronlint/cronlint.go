@@ -6,7 +6,7 @@
 // knowable from a PR diff. So this lint cannot guarantee a durable owner. What
 // it CAN do is force every cron to be registered (owner + cadence on record) or
 // explicitly allow-listed, and fail anything else. Durable ownership is then
-// enforced merge-side (a li-cron bot-merge), with deadman/rehome as the backstop.
+// enforced merge-side (a cron-bot bot-merge), with deadman/rehome as the backstop.
 //
 // Two policies:
 //   - default: a cron-bearing workflow must be in the registry or allow-list.

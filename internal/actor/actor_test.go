@@ -7,13 +7,12 @@ func TestClass(t *testing.T) {
 		login string
 		want  string
 	}{
-		{"li-dep-eng[bot]", "bot"},
-		{"li-auto-merge", "bot"},
+		{"some-app[bot]", "bot"},
 		{"web-flow", "bot"},
-		{"svc-sast-dms_LinkedIn", "service"},
+		{"svc-sast-dms_EMU", "service"},
 		{"svc_foo", "service"},
-		{"a1b2c3d4e5f600112233_LinkedIn", "deprovisioned"},
-		{"ccarini_LinkedIn", "human"},
+		{"a1b2c3d4e5f600112233_EMU", "deprovisioned"},
+		{"ccarini_EMU", "human"},
 		{"octocat", "external"},
 		{"", "none"},
 	}
@@ -43,5 +42,19 @@ func TestDisposition(t *testing.T) {
 	}
 	if got := Disposition("bot"); got[:5] != "leave" {
 		t.Errorf("bot disposition = %q, want leave...", got)
+	}
+}
+
+func TestSetEMUSuffix(t *testing.T) {
+	defer SetEMUSuffix("_EMU") // restore the default for other tests
+	SetEMUSuffix("_acme")
+	if got := Class("jdoe_acme"); got != "human" {
+		t.Errorf("with suffix _acme, Class(jdoe_acme) = %q, want human", got)
+	}
+	if got := Class("jdoe_EMU"); got != "external" {
+		t.Errorf("after switching suffix, _EMU is external, got %q", got)
+	}
+	if got := Class("a1b2c3d4e5f600112233_acme"); got != "deprovisioned" {
+		t.Errorf("anon hash + new suffix should be deprovisioned, got %q", got)
 	}
 }

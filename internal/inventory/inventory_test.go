@@ -42,14 +42,14 @@ func TestLoadCronsRoundTrip(t *testing.T) {
 func TestLoadLastRunsErrorEntryIsZero(t *testing.T) {
 	// A normal run plus an error-only entry (which has no run fields).
 	p := write(t, "last_runs.json", `{
-	  "o/r::.github/workflows/x.yml":{"actor":"li-cron[bot]","conclusion":"success","last_run":"2026-01-01T00:00:00Z","url":"http://x"},
+	  "o/r::.github/workflows/x.yml":{"actor":"cron-bot[bot]","conclusion":"success","last_run":"2026-01-01T00:00:00Z","url":"http://x"},
 	  "o/r::.github/workflows/bad.yml":{"error":"not found"}
 	}`)
 	runs, err := LoadLastRuns(p)
 	if err != nil {
 		t.Fatalf("LoadLastRuns: %v", err)
 	}
-	if runs[Key("o/r", ".github/workflows/x.yml")].Actor != "li-cron[bot]" {
+	if runs[Key("o/r", ".github/workflows/x.yml")].Actor != "cron-bot[bot]" {
 		t.Fatalf("normal entry not parsed: %#v", runs)
 	}
 	if got := runs[Key("o/r", ".github/workflows/bad.yml")]; got != (RunEvidence{}) {

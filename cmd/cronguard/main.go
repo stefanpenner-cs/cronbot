@@ -1,6 +1,6 @@
 // Command cronguard is the identity-gate required check. It fails a PR that adds
 // or changes a cron value unless the PR author is an allowed actor
-// (li-cron[bot]), forcing humans through the intake bot.
+// (cron-bot[bot]), forcing humans through the intake bot.
 //
 // It compares each changed workflow file's content at --base (a git ref) with
 // the version on disk (the PR head), then applies the gate.
@@ -38,7 +38,7 @@ func main() {
 	base := flag.String("base", "", "git ref of the PR base (e.g. origin/main)")
 	jsonOut := flag.String("json-out", "", "write violations as JSON to this path")
 	var allow stringList
-	flag.Var(&allow, "allow-actor", "actor allowed to change crons; repeatable (default li-cron[bot])")
+	flag.Var(&allow, "allow-actor", "actor allowed to change crons; repeatable (default cron-bot[bot])")
 	flag.Parse()
 
 	if *actor == "" {

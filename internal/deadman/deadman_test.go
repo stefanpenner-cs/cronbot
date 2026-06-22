@@ -35,7 +35,7 @@ func TestCollapseKeepsFastestCadence(t *testing.T) {
 func TestRecentDailyIsFiringNotMissed(t *testing.T) {
 	files := CollapseFiles([]inventory.Cron{cron("o/r", "w", "0 9 * * *")})
 	last := map[string]inventory.RunEvidence{
-		"o/r::w": {LastRun: "2026-06-17T09:00:00Z", Actor: "x_LinkedIn", URL: "u"},
+		"o/r::w": {LastRun: "2026-06-17T09:00:00Z", Actor: "x_EMU", URL: "u"},
 	}
 	rows := Assess(files, last, now)
 	if rows[0].Health != "firing" {

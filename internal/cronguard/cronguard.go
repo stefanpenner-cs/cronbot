@@ -1,6 +1,6 @@
 // Package cronguard is the identity gate: the required CI check that blocks a
 // cron value from being added or changed unless the change is authored by an
-// allowed actor (li-cron[bot]). Humans are forced through the intake bot.
+// allowed actor (cron-bot[bot]). Humans are forced through the intake bot.
 //
 // It is diff-aware. A cron VALUE change looks like "old value removed, new value
 // added", so the gate fires on any cron expression present in HEAD but not in
@@ -17,7 +17,7 @@ import (
 )
 
 // DefaultAllowed is the actor permitted to add or change crons.
-var DefaultAllowed = []string{"li-cron[bot]"}
+var DefaultAllowed = []string{"cron-bot[bot]"}
 
 // FileDiff is one workflow file's base and head content. Base is "" for a new
 // file; Head is "" for a deleted file.

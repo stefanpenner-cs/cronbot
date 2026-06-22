@@ -3,7 +3,7 @@
 # into every targeted repo's pull requests; the repo adds nothing.
 #
 # It fails any PR that adds or changes a cron value unless the PR author is
-# li-cron[bot]. Humans are forced through the cron-intake issue flow.
+# cron-bot[bot]. Humans are forced through the cron-intake issue flow.
 name: cron-policy
 
 on:

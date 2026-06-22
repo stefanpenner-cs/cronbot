@@ -1,10 +1,10 @@
 // Package cronbot is the brain of the intake bot. It turns an approved cron
 // request into a concrete provisioning plan: the central-registry entry plus the
-// schedule-neutral "bot touch" that, once merged by li-cron[bot], makes the bot
+// schedule-neutral "bot touch" that, once merged by cron-bot[bot], makes the bot
 // the durable actor.
 //
 // The plan is pure and testable. The actual git/PR/merge is performed by the
-// intake workflow using `gh` authenticated as the li-cron App (the hands).
+// intake workflow using `gh` authenticated as the cron-bot App (the hands).
 package cronbot
 
 import (
@@ -20,9 +20,9 @@ import (
 // OwnerTeam is the single team accountable for every managed cron and the only
 // crew allowed to approve and merge cron changes. It is fixed policy, not a
 // per-request field.
-const OwnerTeam = "ci-cd-platform-reviewers"
+const OwnerTeam = "cron-reviewers"
 
-// Plan is everything the intake workflow needs to land a li-cron-owned cron.
+// Plan is everything the intake workflow needs to land a cron-bot-owned cron.
 type Plan struct {
 	Repo          string         `json:"repo"`
 	Path          string         `json:"path"`
@@ -39,7 +39,7 @@ type Plan struct {
 // RemovalPlan is everything the intake workflow needs to retire a managed cron:
 // the central-registry key to de-register and the bot-authored edit that deletes
 // the schedule from the target workflow. Like BuildPlan, it is pure and testable;
-// the workflow performs the git/PR/merge as the li-cron App.
+// the workflow performs the git/PR/merge as the cron-bot App.
 type RemovalPlan struct {
 	Repo          string `json:"repo"`
 	Path          string `json:"path"`
@@ -53,15 +53,15 @@ type RemovalPlan struct {
 
 // BuildRemovalPlan computes the plan to retire an approved cron. De-registering
 // is the tested, automated part; the workflow deletes the schedule line in the
-// target repo and merges as li-cron[bot].
+// target repo and merges as cron-bot[bot].
 func BuildRemovalPlan(req intake.CronRequest, requestURL string) RemovalPlan {
 	return RemovalPlan{
 		Repo:          req.Repo,
 		Path:          req.Path,
 		RegistryKey:   registry.Key(req.Repo, req.Path),
-		Branch:        "li-cron/remove-" + slug(req.Repo+"-"+req.Path),
+		Branch:        "cron-bot/remove-" + slug(req.Repo+"-"+req.Path),
 		PRTitle:       "chore(cron): remove managed schedule for " + req.Path,
-		CommitMessage: "chore(cron): retire " + req.Path + " cron (de-homed from li-cron[bot])",
+		CommitMessage: "chore(cron): retire " + req.Path + " cron (de-homed from cron-bot[bot])",
 		MergeMethod:   rehome.MergeMethod,
 		Request:       requestURL,
 	}
@@ -76,7 +76,7 @@ func slug(s string) string {
 
 // BuildPlan computes the provisioning plan for an approved request. The bot's
 // edit rewrites the cron to a schedule-equivalent but textually different value
-// (via cronequiv); merging that as li-cron[bot] re-attributes the actor without
+// (via cronequiv); merging that as cron-bot[bot] re-attributes the actor without
 // changing when it runs.
 func BuildPlan(req intake.CronRequest, requestURL string) Plan {
 	newExpr, ok := cronequiv.Rewrite(req.Expr)
@@ -89,9 +89,9 @@ func BuildPlan(req intake.CronRequest, requestURL string) Plan {
 		OldExpr:       req.Expr,
 		NewExpr:       newExpr,
 		CanRewrite:    ok,
-		Branch:        "li-cron/" + slug(req.Repo+"-"+req.Path),
-		PRTitle:       "chore(cron): li-cron-owned schedule for " + req.Path,
-		CommitMessage: "chore(cron): re-home " + req.Path + " onto li-cron[bot]",
+		Branch:        "cron-bot/" + slug(req.Repo+"-"+req.Path),
+		PRTitle:       "chore(cron): cron-bot-owned schedule for " + req.Path,
+		CommitMessage: "chore(cron): re-home " + req.Path + " onto cron-bot[bot]",
 		MergeMethod:   rehome.MergeMethod,
 		Entry: registry.Entry{
 			Repo:      req.Repo,

@@ -4,7 +4,7 @@ import "testing"
 
 const sampleBody = `### Target repository
 
-linkedin-actions/foo
+octo-org/foo
 
 ### Workflow path
 
@@ -22,7 +22,7 @@ nightly backup job
 func TestParse(t *testing.T) {
 	got := Parse(sampleBody)
 	want := CronRequest{
-		Repo:          "linkedin-actions/foo",
+		Repo:          "octo-org/foo",
 		Path:          ".github/workflows/nightly.yml",
 		Expr:          "0 9 * * *",
 		Justification: "nightly backup job",
@@ -58,7 +58,7 @@ func TestValidateBad(t *testing.T) {
 
 func TestValidateRemovalRequiresRepoPathReason(t *testing.T) {
 	ok := CronRequest{
-		Repo: "linkedin-actions/foo", Path: ".github/workflows/nightly.yml",
+		Repo: "octo-org/foo", Path: ".github/workflows/nightly.yml",
 		Justification: "service retired",
 	}
 	if errs := ok.ValidateRemoval(); len(errs) != 0 {
@@ -68,7 +68,7 @@ func TestValidateRemovalRequiresRepoPathReason(t *testing.T) {
 
 func TestValidateRemovalIgnoresExpr(t *testing.T) {
 	r := CronRequest{
-		Repo: "linkedin-actions/foo", Path: ".github/workflows/nightly.yml",
+		Repo: "octo-org/foo", Path: ".github/workflows/nightly.yml",
 		Justification: "service retired",
 		// no Expr — removal does not need one
 	}

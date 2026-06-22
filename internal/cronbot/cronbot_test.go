@@ -8,7 +8,7 @@ import (
 
 func req() intake.CronRequest {
 	return intake.CronRequest{
-		Repo: "linkedin-actions/foo",
+		Repo: "octo-org/foo",
 		Path: ".github/workflows/nightly.yml",
 		Expr: "0 9 * * *",
 	}
@@ -29,7 +29,7 @@ func TestBuildPlanRewritesScheduleNeutral(t *testing.T) {
 
 func TestBuildPlanBranchAndEntry(t *testing.T) {
 	p := BuildPlan(req(), "https://github.com/o/r/issues/1")
-	if p.Branch != "li-cron/linkedin-actions-foo-github-workflows-nightly-yml" {
+	if p.Branch != "cron-bot/octo-org-foo-github-workflows-nightly-yml" {
 		t.Fatalf("unexpected branch: %q", p.Branch)
 	}
 	if p.Entry.OwnerTeam != OwnerTeam || p.Entry.Request != "https://github.com/o/r/issues/1" {
@@ -58,10 +58,10 @@ func TestBuildRemovalPlan(t *testing.T) {
 	if p.Repo != r.Repo || p.Path != r.Path {
 		t.Fatalf("repo/path not carried: %#v", p)
 	}
-	if p.RegistryKey != "linkedin-actions/foo::.github/workflows/nightly.yml" {
+	if p.RegistryKey != "octo-org/foo::.github/workflows/nightly.yml" {
 		t.Fatalf("unexpected registry key: %q", p.RegistryKey)
 	}
-	if p.Branch != "li-cron/remove-linkedin-actions-foo-github-workflows-nightly-yml" {
+	if p.Branch != "cron-bot/remove-octo-org-foo-github-workflows-nightly-yml" {
 		t.Fatalf("unexpected branch: %q", p.Branch)
 	}
 	if p.MergeMethod == "" || p.PRTitle == "" || p.CommitMessage == "" {

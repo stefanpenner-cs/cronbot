@@ -15,7 +15,7 @@
 // pushes the cron-syntax change — not knowable from a diff. So this lint cannot
 // guarantee a durable owner; it forces every cron to be registered or
 // allow-listed and fails the rest. Make it a REQUIRED status check, land cron
-// changes via a li-cron bot-merge (so the bot is the actor), and keep
+// changes via a cron-bot bot-merge (so the bot is the actor), and keep
 // deadman/rehome as the backstop. Use --list-touched to feed that bot-merge the
 // set of cron-bearing files in a PR.
 //
@@ -47,7 +47,7 @@ func main() {
 	registryPath := flag.String("registry", "", "newline-delimited file of permitted workflow paths (# comments allowed)")
 	dir := flag.String("dir", "", "walk this tree for .github/workflows/*.y{a,}ml instead of taking file args")
 	jsonOut := flag.String("json-out", "", "write violations as JSON to this path")
-	listTouched := flag.Bool("list-touched", false, "print cron-bearing files (one per line) and exit 0; the li-cron bot-merge signal")
+	listTouched := flag.Bool("list-touched", false, "print cron-bearing files (one per line) and exit 0; the cron-bot bot-merge signal")
 	var allow stringList
 	flag.Var(&allow, "allow", "glob of exempt paths; repeatable (** spans directories)")
 	flag.Parse()

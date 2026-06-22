@@ -3,11 +3,9 @@
 //
 //	bot / service  -> durable automation; leave it.
 //	deprovisioned  -> EMU-anonymized (former employee); runs have STOPPED.
-//	human          -> a personal "*_LinkedIn" handle; dies on departure.
-//	external       -> a live non-LinkedIn account (mirrored upstream); unowned.
+//	human          -> a personal "*_EMU" handle; dies on departure.
+//	external       -> a live non-EMU account (mirrored upstream); unowned.
 //	none           -> no scheduled run on record.
-//
-// Mirrors scripts/cron_owner_burndown.py so the two stay consistent.
 package actor
 
 import (
@@ -15,11 +13,26 @@ import (
 	"strings"
 )
 
-// An EMU handle anonymizes to a long hex hash + "_LinkedIn" on deprovision.
-var anonRE = regexp.MustCompile(`^[0-9a-f]{20,}_LinkedIn$`)
+// EMUSuffix is your GitHub Enterprise Managed User handle suffix (e.g. "_acme").
+// Personal EMU logins end with it; set it for your enterprise via SetEMUSuffix.
+var EMUSuffix = "_EMU"
 
-// Non-App bot actors seen firing crons.
-var bots = map[string]bool{"li-auto-merge": true, "web-flow": true}
+// A deprovisioned EMU handle anonymizes to a long hex hash + EMUSuffix.
+var anonRE = compileAnon(EMUSuffix)
+
+func compileAnon(suffix string) *regexp.Regexp {
+	return regexp.MustCompile(`^[0-9a-f]{20,}` + regexp.QuoteMeta(suffix) + `$`)
+}
+
+// SetEMUSuffix overrides the enterprise EMU handle suffix used to tell a personal
+// (human) account from an external one.
+func SetEMUSuffix(suffix string) {
+	EMUSuffix = suffix
+	anonRE = compileAnon(suffix)
+}
+
+// Non-App bot actors seen firing crons (GitHub's web merge bot).
+var bots = map[string]bool{"web-flow": true}
 
 // ClassOrder ranks classes most-fragile first (handy for risk sorting).
 var ClassOrder = map[string]int{
@@ -62,7 +75,7 @@ func Class(login string) string {
 		return "service"
 	case anonRE.MatchString(login):
 		return "deprovisioned"
-	case strings.HasSuffix(login, "_LinkedIn"):
+	case strings.HasSuffix(login, EMUSuffix):
 		return "human"
 	default:
 		return "external"

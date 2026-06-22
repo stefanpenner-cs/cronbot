@@ -18,7 +18,7 @@ import (
 // on a direct push, but the ORIGINAL author on a rebase merge.
 const (
 	MergeMethod     = "squash or merge-commit (never rebase-merge)"
-	TargetActorHint = "a durable service/bot account (svc-* or li-cron[bot])"
+	TargetActorHint = "a durable service/bot account (svc-* or cron-bot[bot])"
 )
 
 // Entry is one dry-run plan row for a single cron expression.

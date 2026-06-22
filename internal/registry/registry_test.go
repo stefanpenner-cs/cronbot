@@ -18,8 +18,8 @@ func TestLoadMissingIsEmpty(t *testing.T) {
 
 func sample() Entry {
 	return Entry{
-		Repo: "linkedin-actions/foo", Path: ".github/workflows/nightly.yml",
-		Expr: "0 9 * * *", OwnerTeam: "ci-cd-platform-reviewers",
+		Repo: "octo-org/foo", Path: ".github/workflows/nightly.yml",
+		Expr: "0 9 * * *", OwnerTeam: "cron-reviewers",
 		Request: "https://github.com/o/r/issues/1",
 	}
 }
@@ -45,10 +45,10 @@ func TestUpsertAddThenUpdate(t *testing.T) {
 func TestUpsertSorted(t *testing.T) {
 	r := &Registry{}
 	b := sample()
-	b.Repo = "linkedin-actions/zzz"
+	b.Repo = "octo-org/zzz"
 	r.Upsert(b)
-	r.Upsert(sample()) // linkedin-actions/foo sorts first
-	if r.Entries[0].Repo != "linkedin-actions/foo" {
+	r.Upsert(sample()) // octo-org/foo sorts first
+	if r.Entries[0].Repo != "octo-org/foo" {
 		t.Fatalf("entries not sorted by key: %#v", r.Entries)
 	}
 }
@@ -128,8 +128,8 @@ func TestReconcilePrunesEntriesWithNoLiveCron(t *testing.T) {
 	r := &Registry{}
 	kept := sample()
 	gone := Entry{
-		Repo: "linkedin-actions/bar", Path: ".github/workflows/old.yml",
-		Expr: "0 1 * * *", OwnerTeam: "ci-cd-platform-reviewers",
+		Repo: "octo-org/bar", Path: ".github/workflows/old.yml",
+		Expr: "0 1 * * *", OwnerTeam: "cron-reviewers",
 		Request: "https://github.com/o/r/issues/2",
 	}
 	r.Upsert(kept)

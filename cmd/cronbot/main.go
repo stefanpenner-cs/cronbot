@@ -1,8 +1,8 @@
-// Command cronbot is the brain of the li-cron cron-intake flow. It parses an
+// Command cronbot is the brain of the cron-bot cron-intake flow. It parses an
 // approved issue-form request, validates it, builds the provisioning plan, and
 // (optionally) upserts the central registry. The intake workflow then uses the
 // emitted plan to create the branch, edit the workflow, and merge the PR as the
-// li-cron App.
+// cron-bot App.
 //
 // Usage:
 //
@@ -99,7 +99,7 @@ func readBody(path string) (string, error) {
 
 // runRemoval validates an approved removal request, prints the removal plan, and
 // (when --registry is given) de-registers the cron from the central catalog. The
-// workflow performs the target-repo schedule deletion as the li-cron App.
+// workflow performs the target-repo schedule deletion as the cron-bot App.
 func runRemoval(req intake.CronRequest, requestURL, registryPath, jsonOut string) {
 	if errs := req.ValidateRemoval(); len(errs) > 0 {
 		fmt.Fprintln(os.Stderr, "Invalid cron removal request:")
@@ -157,5 +157,5 @@ func printPlan(p cronbot.Plan, w io.Writer) {
 		fmt.Fprintln(w, "  WARNING: no safe schedule-neutral rewrite; bot edit equals the original")
 	}
 	fmt.Fprintf(w, "  branch     : %s\n", p.Branch)
-	fmt.Fprintf(w, "  merge      : %s (so li-cron[bot] becomes the actor)\n", p.MergeMethod)
+	fmt.Fprintf(w, "  merge      : %s (so cron-bot[bot] becomes the actor)\n", p.MergeMethod)
 }

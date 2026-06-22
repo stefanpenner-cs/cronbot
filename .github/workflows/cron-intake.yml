@@ -6,8 +6,8 @@
 # validate+comment halves need nothing but the default token, so you can see
 # them in action immediately.
 #
-# The provision jobs (update the registry, land/retire the cron as the li-cron
-# App) are gated on the li-cron App being configured. Until then they are
+# The provision jobs (update the registry, land/retire the cron as the cron-bot
+# App) are gated on the cron-bot App being configured. Until then they are
 # skipped, so the validate+comment demo runs on its own.
 name: cron-intake
 
@@ -43,10 +43,10 @@ jobs:
           set -e
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           {
-            echo "## li-cron intake"
+            echo "## cron-bot intake"
             echo
             if [ "$code" -eq 0 ]; then
-              echo "Request is valid. Pending sign-off from \`ci-cd-platform-reviewers\`."
+              echo "Request is valid. Pending sign-off from \`cron-reviewers\`."
               echo
               echo '```'
               cat plan.txt
@@ -69,7 +69,7 @@ jobs:
 
   provision:
     needs: validate
-    if: vars.LI_CRON_APP_ID != ''
+    if: vars.CRON_APP_ID != ''
     runs-on: ubuntu-latest
     environment: cron-approval
     permissions:
@@ -82,8 +82,8 @@ jobs:
       - uses: actions/create-github-app-token@v1
         id: app-token
         with:
-          app-id: ${{ vars.LI_CRON_APP_ID }}
-          private-key: ${{ secrets.LI_CRON_APP_KEY }}
+          app-id: ${{ vars.CRON_APP_ID }}
+          private-key: ${{ secrets.CRON_APP_KEY }}
           owner: ${{ github.repository_owner }}
       - uses: actions/setup-go@v5
         with:
@@ -96,8 +96,8 @@ jobs:
           printf '%s' "$ISSUE_BODY" > issue.md
           go run ./cmd/cronbot --issue-body issue.md --request-url "$ISSUE_URL" \
             --registry registry.json --json-out plan.json
-          git config user.name 'li-cron[bot]'
-          git config user.email 'li-cron[bot]@users.noreply.github.com'
+          git config user.name 'cron-bot[bot]'
+          git config user.email 'cron-bot[bot]@users.noreply.github.com'
           git add registry.json
           git commit -m "chore(cron): register ${{ github.event.issue.title }}" || echo "registry unchanged"
           git push
@@ -110,7 +110,7 @@ jobs:
       - name: Close the request
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --comment "Landed by li-cron[bot]."
+        run: gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --comment "Landed by cron-bot[bot]."
 
   validate-removal:
     if: contains(github.event.issue.labels.*.name, 'cron-removal')
@@ -135,10 +135,10 @@ jobs:
           set -e
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           {
-            echo "## li-cron removal"
+            echo "## cron-bot removal"
             echo
             if [ "$code" -eq 0 ]; then
-              echo "Removal request is valid. Pending sign-off from \`ci-cd-platform-reviewers\`."
+              echo "Removal request is valid. Pending sign-off from \`cron-reviewers\`."
               echo
               echo '```'
               cat plan.txt
@@ -161,7 +161,7 @@ jobs:
 
   provision-removal:
     needs: validate-removal
-    if: vars.LI_CRON_APP_ID != ''
+    if: vars.CRON_APP_ID != ''
     runs-on: ubuntu-latest
     environment: cron-approval
     permissions:
@@ -174,8 +174,8 @@ jobs:
       - uses: actions/create-github-app-token@v1
         id: app-token
         with:
-          app-id: ${{ vars.LI_CRON_APP_ID }}
-          private-key: ${{ secrets.LI_CRON_APP_KEY }}
+          app-id: ${{ vars.CRON_APP_ID }}
+          private-key: ${{ secrets.CRON_APP_KEY }}
           owner: ${{ github.repository_owner }}
       - uses: actions/setup-go@v5
         with:
@@ -188,8 +188,8 @@ jobs:
           printf '%s' "$ISSUE_BODY" > issue.md
           go run ./cmd/cronbot --remove --issue-body issue.md --request-url "$ISSUE_URL" \
             --registry registry.json --json-out plan.json
-          git config user.name 'li-cron[bot]'
-          git config user.email 'li-cron[bot]@users.noreply.github.com'
+          git config user.name 'cron-bot[bot]'
+          git config user.email 'cron-bot[bot]@users.noreply.github.com'
           git add registry.json
           git commit -m "chore(cron): de-register ${{ github.event.issue.title }}" || echo "registry unchanged"
           git push
@@ -202,4 +202,4 @@ jobs:
       - name: Close the request
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --comment "Retired by li-cron[bot]."
+        run: gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --comment "Retired by cron-bot[bot]."

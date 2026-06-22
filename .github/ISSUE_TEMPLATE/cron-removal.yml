@@ -2,7 +2,7 @@
 # The field labels MUST match what cronbot parses (Target repository, Workflow
 # path, Reason).
 name: Cron removal
-description: Retire a managed (li-cron[bot]-owned) scheduled workflow.
+description: Retire a managed (cron-bot[bot]-owned) scheduled workflow.
 title: "[cron-remove] "
 labels: ["cron-removal"]
 body:
@@ -10,8 +10,8 @@ body:
     attributes:
       value: |
         Stopping a scheduled job is a functional change, so removal is reviewed
-        the same way adds are: file this request; the ci-cd-platform-reviewers
-        crew signs off; li-cron deletes the schedule and de-registers the cron.
+        the same way adds are: file this request; the cron-reviewers
+        crew signs off; cron-bot deletes the schedule and de-registers the cron.
 
         Faster path for self-service: you may also just delete the `schedule:`
         cron from the workflow yourself (the identity gate allows removals), and
@@ -21,7 +21,7 @@ body:
     attributes:
       label: Target repository
       description: owner/name of the repo that runs the cron.
-      placeholder: linkedin-actions/foo
+      placeholder: octo-org/foo
     validations:
       required: true
   - type: input

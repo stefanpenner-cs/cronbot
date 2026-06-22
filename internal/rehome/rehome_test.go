@@ -23,7 +23,7 @@ func runs(pairs map[string]string) map[string]inventory.RunEvidence {
 
 func TestDurableActorsAreSkipped(t *testing.T) {
 	crons := []inventory.Cron{cron("o/r", "w", "0 9 * * *", "active")}
-	for _, durable := range []string{"svc-foo_LinkedIn", "li-dep-eng[bot]"} {
+	for _, durable := range []string{"svc-foo_EMU", "some-app[bot]"} {
 		got := Plan(crons, runs(map[string]string{"o/r::w": durable}))
 		if len(got) != 0 {
 			t.Errorf("actor %q produced %d entries, want 0", durable, len(got))
@@ -33,7 +33,7 @@ func TestDurableActorsAreSkipped(t *testing.T) {
 
 func TestHumanActorIsPlannedWithEquivalentRewrite(t *testing.T) {
 	crons := []inventory.Cron{cron("o/r", "w", "0 9 * * *", "active")}
-	got := Plan(crons, runs(map[string]string{"o/r::w": "alice_LinkedIn"}))
+	got := Plan(crons, runs(map[string]string{"o/r::w": "alice_EMU"}))
 	if len(got) != 1 {
 		t.Fatalf("got %d entries, want 1", len(got))
 	}
@@ -51,7 +51,7 @@ func TestHumanActorIsPlannedWithEquivalentRewrite(t *testing.T) {
 
 func TestDeprovisionedActorIsPlanned(t *testing.T) {
 	crons := []inventory.Cron{cron("o/r", "w", "37 6 * * 2", "active")}
-	got := Plan(crons, runs(map[string]string{"o/r::w": "a1b2c3d4e5f600112233_LinkedIn"}))
+	got := Plan(crons, runs(map[string]string{"o/r::w": "a1b2c3d4e5f600112233_EMU"}))
 	if got[0].ActorClass != "deprovisioned" {
 		t.Errorf("class = %q, want deprovisioned", got[0].ActorClass)
 	}
@@ -70,7 +70,7 @@ func TestExternalActorIsPlanned(t *testing.T) {
 
 func TestDisabledWorkflowFlagsReEnable(t *testing.T) {
 	crons := []inventory.Cron{cron("o/r", "w", "0 9 * * *", "disabled_inactivity")}
-	got := Plan(crons, runs(map[string]string{"o/r::w": "alice_LinkedIn"}))
+	got := Plan(crons, runs(map[string]string{"o/r::w": "alice_EMU"}))
 	if !got[0].ReEnable {
 		t.Errorf("ReEnable = false, want true")
 	}
@@ -89,8 +89,8 @@ func TestSortedDeprovisionedBeforeHuman(t *testing.T) {
 		cron("o/d", "w", "0 9 * * *", "active"),
 	}
 	got := Plan(crons, runs(map[string]string{
-		"o/h::w": "alice_LinkedIn",
-		"o/d::w": "deadbeefdeadbeefdead_LinkedIn",
+		"o/h::w": "alice_EMU",
+		"o/d::w": "deadbeefdeadbeefdead_EMU",
 	}))
 	if got[0].ActorClass != "deprovisioned" || got[1].ActorClass != "human" {
 		t.Errorf("order = [%s, %s], want [deprovisioned, human]", got[0].ActorClass, got[1].ActorClass)
@@ -99,7 +99,7 @@ func TestSortedDeprovisionedBeforeHuman(t *testing.T) {
 
 func TestURLPointsAtCronLine(t *testing.T) {
 	crons := []inventory.Cron{cron("o/r", ".github/workflows/w.yml", "0 9 * * *", "active")}
-	got := Plan(crons, runs(map[string]string{"o/r::.github/workflows/w.yml": "alice_LinkedIn"}))
+	got := Plan(crons, runs(map[string]string{"o/r::.github/workflows/w.yml": "alice_EMU"}))
 	want := "https://github.com/o/r/blob/master/.github/workflows/w.yml#L10"
 	if got[0].URL != want {
 		t.Errorf("URL = %q, want %q", got[0].URL, want)
@@ -108,7 +108,7 @@ func TestURLPointsAtCronLine(t *testing.T) {
 
 func TestEmitDryRunAppliesNothing(t *testing.T) {
 	crons := []inventory.Cron{cron("o/r", "w", "0 9 * * *", "active")}
-	rows := Plan(crons, runs(map[string]string{"o/r::w": "alice_LinkedIn"}))
+	rows := Plan(crons, runs(map[string]string{"o/r::w": "alice_EMU"}))
 	var b bytes.Buffer
 	Emit(rows, &b)
 	out := b.String()

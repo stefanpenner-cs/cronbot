@@ -4,8 +4,8 @@
 // It applies nothing — no commits, no pushes, no API writes. Inputs are
 // produced by the existing pipeline:
 //
-//	data/cron/linkedin-actions/crons.json      (scripts/cron_inventory.py)
-//	data/cron/linkedin-actions/last_runs.json  (scripts/cron_last_runs.py)
+//	data/cron/octo-org/crons.json      (scripts/cron_inventory.py)
+//	data/cron/octo-org/last_runs.json  (scripts/cron_last_runs.py)
 //
 // Usage (run from the fix-cron/ module directory):
 //
@@ -24,8 +24,8 @@ import (
 )
 
 func main() {
-	cronsPath := flag.String("crons", "../data/cron/linkedin-actions/crons.json", "crons.json path")
-	lastRunsPath := flag.String("last-runs", "../data/cron/linkedin-actions/last_runs.json", "last_runs.json path")
+	cronsPath := flag.String("crons", "../data/cron/octo-org/crons.json", "crons.json path")
+	lastRunsPath := flag.String("last-runs", "../data/cron/octo-org/last_runs.json", "last_runs.json path")
 	jsonOut := flag.String("json-out", "", "write the plan as JSON to this path")
 	flag.Parse()
 

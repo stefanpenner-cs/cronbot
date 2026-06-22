@@ -8,7 +8,7 @@
 //
 //	cronreconcile --registry registry.json --crons crons.json [--dry-run]
 //
-// Run it on a schedule (as li-cron[bot]) in the central repo. Exits 0 whether or
+// Run it on a schedule (as cron-bot[bot]) in the central repo. Exits 0 whether or
 // not anything was pruned; exits 2 on an I/O error.
 package main
 
