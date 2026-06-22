@@ -101,3 +101,59 @@ func TestSaveToBadPathErrors(t *testing.T) {
 		t.Fatal("save into a missing directory should error")
 	}
 }
+
+func TestRemoveDropsEntry(t *testing.T) {
+	r := &Registry{}
+	r.Upsert(sample())
+	if removed := r.Remove(sample().Key()); !removed {
+		t.Fatal("removing a present entry should report removed")
+	}
+	if len(r.Entries) != 0 {
+		t.Fatalf("want 0 entries after remove, got %d", len(r.Entries))
+	}
+}
+
+func TestRemoveAbsentIsNoop(t *testing.T) {
+	r := &Registry{}
+	r.Upsert(sample())
+	if removed := r.Remove(Key("other/repo", ".github/workflows/x.yml")); removed {
+		t.Fatal("removing an absent key should report not-removed")
+	}
+	if len(r.Entries) != 1 {
+		t.Fatalf("absent remove must not change the catalog, got %d", len(r.Entries))
+	}
+}
+
+func TestReconcilePrunesEntriesWithNoLiveCron(t *testing.T) {
+	r := &Registry{}
+	kept := sample()
+	gone := Entry{
+		Repo: "linkedin-actions/bar", Path: ".github/workflows/old.yml",
+		Expr: "0 1 * * *", OwnerTeam: "ci-cd-platform-reviewers",
+		Request: "https://github.com/o/r/issues/2",
+	}
+	r.Upsert(kept)
+	r.Upsert(gone)
+
+	live := map[string]bool{kept.Key(): true} // gone's cron was deleted from its repo
+
+	pruned := r.Reconcile(live)
+	if len(pruned) != 1 || pruned[0].Key() != gone.Key() {
+		t.Fatalf("want the deleted cron pruned, got %#v", pruned)
+	}
+	if len(r.Entries) != 1 || r.Entries[0].Key() != kept.Key() {
+		t.Fatalf("want only the live cron kept, got %#v", r.Entries)
+	}
+}
+
+func TestReconcileNoLiveCronsPrunesAll(t *testing.T) {
+	r := &Registry{}
+	r.Upsert(sample())
+	pruned := r.Reconcile(map[string]bool{})
+	if len(pruned) != 1 {
+		t.Fatalf("empty live set should prune everything, got %d pruned", len(pruned))
+	}
+	if len(r.Entries) != 0 {
+		t.Fatalf("want empty catalog, got %d", len(r.Entries))
+	}
+}

@@ -8,12 +8,13 @@ Make GitHub Actions crons durable, watched, and managed.
 - That person leaves. The cron goes quiet. No one is told.
 - No owner. No alert. No health check.
 
-## The fix: four small Go tools
+## The fix: five small Go tools
 
 - `rehome` — move a cron onto a durable bot account, without changing when it runs.
 - `deadman` — find crons that have gone quiet, and alert.
 - `cronguard` — block any human cron change. Only `li-cron[bot]` may merge one.
 - `cronbot` — turn a cron-request issue into a safe, registered plan.
+- `cronreconcile` — de-register crons that were deleted, so the catalog stays honest.
 
 All dry-run or check-only. Nothing here writes to your repos on its own.
 
@@ -25,6 +26,18 @@ All dry-run or check-only. Nothing here writes to your repos on its own.
 4. `li-cron[bot]` lands it. Now the bot owns it. It is durable.
 
 A human who edits a cron directly is stopped by `cronguard` and sent here.
+
+## How a cron gets removed
+
+Removing a cron is safe — once the schedule is gone, nothing runs, so there is
+no actor to mis-own. So removal is simple:
+
+1. Delete the `schedule:` cron from the workflow. `cronguard` allows this; no
+   request needed.
+2. `cronreconcile` runs (on a schedule, as the bot) and drops the now-missing
+   cron from the central registry.
+
+So adds are gated and signed-off; removes are free, then the catalog self-heals.
 
 ## See it live
 
@@ -43,6 +56,7 @@ go run ./cmd/deadman          # quiet-cron report
 go run ./cmd/rehome           # re-home plan (dry-run)
 go run ./cmd/cronbot --issue-body issue.md --request-url URL
 go run ./cmd/cronguard --actor "$PR_AUTHOR" --base origin/main path/to/workflow.yml
+go run ./cmd/cronreconcile --registry registry.json --crons crons.json --dry-run
 ```
 
 ## More

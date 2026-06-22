@@ -84,6 +84,36 @@ func (r *Registry) Upsert(e Entry) (added bool) {
 	return true
 }
 
+// Remove drops the entry with the given key. It reports whether one was
+// removed. This is the de-register primitive: a cron leaves the catalog here.
+func (r *Registry) Remove(key string) (removed bool) {
+	for i := range r.Entries {
+		if r.Entries[i].Key() == key {
+			r.Entries = append(r.Entries[:i], r.Entries[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+// Reconcile drops every entry whose cron no longer exists in the repos. live is
+// the set of currently-present cron keys (repo::path), e.g. built from the cron
+// inventory. It returns the pruned entries so the caller can report what was
+// de-registered. This is how removals propagate: cronguard lets a human delete a
+// cron, and Reconcile then de-registers it so the catalog matches reality.
+func (r *Registry) Reconcile(live map[string]bool) []Entry {
+	var kept, pruned []Entry
+	for _, e := range r.Entries {
+		if live[e.Key()] {
+			kept = append(kept, e)
+		} else {
+			pruned = append(pruned, e)
+		}
+	}
+	r.Entries = kept
+	return pruned
+}
+
 // Save writes the registry as indented JSON.
 func (r *Registry) Save(path string) error {
 	b, err := json.MarshalIndent(r.Entries, "", "  ")
