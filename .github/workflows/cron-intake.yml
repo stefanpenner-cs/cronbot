@@ -35,6 +35,8 @@ jobs:
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SERVER: ${{ github.server_url }}
         run: |
           printf '%s' "$ISSUE_BODY" > issue.md
           set +e
@@ -57,6 +59,16 @@ jobs:
               echo '```'
               cat err.txt
               echo '```'
+            fi
+            echo
+            echo "---"
+            echo "- [Workflow run]($RUN_URL) — logs and status."
+            if [ "$code" -eq 0 ]; then
+              repo_path=$(sed -n '1s/^Cron request: //p' plan.txt)
+              tgt_repo=${repo_path%% :: *}
+              tgt_path=${repo_path##* :: }
+              echo "- Target: [\`$tgt_repo\`]($SERVER/$tgt_repo) — [\`$tgt_path\`]($SERVER/$tgt_repo/blob/HEAD/$tgt_path)"
+              echo "- Sign-off: a \`cron-reviewers\` member approves the \`cron-approval\` gate on the [run page]($RUN_URL); cron-bot then lands it."
             fi
           } > comment.md
       - name: Comment the result on the issue
@@ -107,7 +119,8 @@ jobs:
       - name: Close the request
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --comment "Landed by cron-bot[bot]."
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --comment "Landed by cron-bot[bot]. See the [provision run]($RUN_URL)."
 
   validate-removal:
     if: contains(github.event.issue.labels.*.name, 'cron-removal')
@@ -124,6 +137,8 @@ jobs:
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SERVER: ${{ github.server_url }}
         run: |
           printf '%s' "$ISSUE_BODY" > issue.md
           set +e
@@ -146,6 +161,16 @@ jobs:
               echo '```'
               cat err.txt
               echo '```'
+            fi
+            echo
+            echo "---"
+            echo "- [Workflow run]($RUN_URL) — logs and status."
+            if [ "$code" -eq 0 ]; then
+              repo_path=$(sed -n '1s/^Cron removal: //p' plan.txt)
+              tgt_repo=${repo_path%% :: *}
+              tgt_path=${repo_path##* :: }
+              echo "- Target: [\`$tgt_repo\`]($SERVER/$tgt_repo) — [\`$tgt_path\`]($SERVER/$tgt_repo/blob/HEAD/$tgt_path)"
+              echo "- Sign-off: a \`cron-reviewers\` member approves the \`cron-approval\` gate on the [run page]($RUN_URL); cron-bot then retires it."
             fi
           } > comment.md
       - name: Comment the result on the issue
@@ -196,4 +221,5 @@ jobs:
       - name: Close the request
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        run: gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --comment "Retired by cron-bot[bot]."
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: gh issue close "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --comment "Retired by cron-bot[bot]. See the [provision run]($RUN_URL)."
