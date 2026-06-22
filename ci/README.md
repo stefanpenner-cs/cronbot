@@ -12,7 +12,7 @@ How to make crons managed and durable across the enterprise.
 
 ## Where each piece lives
 
-- **The tool, the intake flow, and the registry** → this repo (`cron-policy`).
+- **The tool, the intake flow, and the registry** → this repo (`cronbot`).
   It holds the Go module, the live issue form
   (`.github/ISSUE_TEMPLATE/cron-request.yml`), the live intake workflow
   (`.github/workflows/cron-intake.yml`), and `registry.json`.

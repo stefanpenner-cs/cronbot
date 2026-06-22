@@ -1,4 +1,4 @@
-# cron-policy
+# cronbot
 
 Make GitHub Actions crons durable, watched, and managed.
 
@@ -134,7 +134,7 @@ sequenceDiagram
 
 ## See it live
 
-Prototype: https://github.com/stefanpenner-cs/cron-policy
+Prototype: https://github.com/stefanpenner-cs/cronbot
 
 - Issue #1 (good): the bot says "valid" and shows the plan.
 - Issue #2 (bad): the check goes red and the bot lists the errors.
