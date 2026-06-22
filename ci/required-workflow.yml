@@ -1,8 +1,9 @@
-# Standalone workflow that orgs register as a REQUIRED workflow (via a ruleset).
-# GitHub injects this file into every targeted repo's pull requests; the repo
-# does not need to add anything itself.
+# The enterprise REQUIRED check: the identity gate.
+# Orgs register this as a required workflow (via a ruleset). GitHub injects it
+# into every targeted repo's pull requests; the repo adds nothing.
 #
-# Replace OWNER/cron-policy@v1 with the real published location of this action.
+# It fails any PR that adds or changes a cron value unless the PR author is
+# li-cron[bot]. Humans are forced through the cron-intake issue flow.
 name: cron-policy
 
 on:
@@ -12,14 +13,28 @@ permissions:
   contents: read
 
 jobs:
-  cron-policy:
+  identity-gate:
     runs-on: ubuntu-latest
     steps:
+      # Need full history so we can diff the cron against the base ref.
       - uses: actions/checkout@v4
-      - uses: linkedin-actions/cron-policy/ci@v1
         with:
-          # Start lenient: registry-based. Flip ban-all to "true" to forbid all
-          # crons, or pass allow globs for vendored/mirrored workflows.
-          registry: .github/cron-registry.txt
-          ban-all: "false"
-          allow: ""
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - name: Cron identity gate
+        env:
+          ACTOR: ${{ github.event.pull_request.user.login }}
+          BASE: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          git fetch --quiet origin "$BASE"
+          files=$(git diff --name-only "origin/$BASE...HEAD" -- \
+            '.github/workflows/*.yml' '.github/workflows/*.yaml' \
+            '**/.github/workflows/*.yml' '**/.github/workflows/*.yaml' || true)
+          if [ -z "$files" ]; then
+            echo "No workflow files changed."
+            exit 0
+          fi
+          go run ./cmd/cronguard --actor "$ACTOR" --base "origin/$BASE" $files

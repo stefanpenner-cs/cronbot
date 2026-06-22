@@ -1,10 +1,10 @@
 # fix-cron — fix GHA cron rot
 
-Three small, tested Go tools plus this design doc.
+A set of small, tested Go tools plus this design doc.
 
-They make GitHub Actions crons durable and observable.
+They make GitHub Actions crons durable, observable, and managed.
 
-Dry-run only. Nothing here writes to any repo.
+Dry-run / CI-template only. Nothing here writes to any repo.
 
 ## The problem
 
@@ -30,7 +30,7 @@ Source: `github.com/stefanpenner-cs/cron-debugging`, `../who_owns_cron.md`.
   value itself must change.
 - A cron change does not re-enable a disabled workflow.
 
-## The fix: two pillars
+## The fix: four pillars
 
 ### Pillar A — durable ownership (`cmd/rehome`)
 
@@ -91,26 +91,39 @@ What a lint can and cannot do:
 - It can force every cron to be registered or allow-listed, and fail the
   rest. That is the prevention half.
 
-#### Ensuring only `li-cron` merges cron changes
+### Pillar D — managed ownership (the intake bot)
 
-There is no native GitHub rule that says "PRs touching a `cron:` must be
-merged by li-cron." Merger-identity rules cannot key off changed paths. You
-get there by stacking:
+Built, not just described. Three new pieces turn "only li-cron owns crons"
+into a real flow:
 
-1. Lock the branch (native, broad). Branch protection → restrict who can
-   push to the default branch → only the li-cron app. Every merge is the
-   bot, so every cron becomes bot-owned. Cost: all merges go through the bot.
-2. Required check + bot-merge (native, targeted). Run `cronlint` as a
-   required status check so humans cannot merge a cron PR (red check). The
-   li-cron app is the only allowed merger and lands the squash, so the bot
-   is the actor. Use `cronlint --list-touched` to tell that bot-merge which
-   PRs touch a cron. Catch: a repo admin with bypass can still override.
-3. Backstop (eventual). `cmd/deadman` + `cmd/rehome` sweep anything that
-   slips: admin bypass, repos not yet on the policy.
+- **Identity gate (`cmd/cronguard`).** The enterprise required check. It diffs
+  each changed workflow against the base and fails any PR that adds or changes
+  a cron value unless the PR author is `li-cron[bot]`. Humans are forced
+  through intake. (Removing a cron is always allowed.)
+- **Intake bot (`cmd/cronbot` + `ci/intake.yml`).** A person files a
+  `cron-request` issue form. `cronbot` parses and validates it. The crew signs
+  off via a GitHub Environment gate. Then `cronbot` updates the central
+  registry and the li-cron App lands the change (squash merge), so the bot is
+  the actor.
+- **Central registry (`internal/registry`, `registry.json`).** The catalog of
+  every managed cron: repo, path, schedule, owner team, cadence, request link.
+  The source of truth that deadman/rehome consume.
 
-Enterprise rollout (one shared tool repo, per-repo registry, one ruleset per
-org) is spelled out in `ci/README.md`, with ready-to-publish templates:
-`ci/action.yml`, `ci/required-workflow.yml`, `ci/org-ruleset.example.json`.
+Why an identity gate beats a path rule: there is no native GitHub rule that
+says "PRs touching a `cron:` must be merged by li-cron." Merger-identity rules
+cannot key off changed paths. So we gate on the PR author instead, and make the
+intake bot the only way to get a bot-authored cron change.
+
+Backstop: a repo admin with bypass can still force a cron in. `cmd/deadman` +
+`cmd/rehome` sweep anything that slips.
+
+Enterprise rollout (one shared tool repo, central registry, the intake flow,
+one ruleset per org) is spelled out in `ci/README.md`, with ready-to-publish
+templates: `ci/required-workflow.yml` (identity gate), `ci/intake.yml`,
+`ci/ISSUE_TEMPLATE/cron-request.yml`, `ci/org-ruleset.example.json`.
+
+The earlier `cmd/cronlint` registry/allow-list check is retained as an optional
+per-repo lint.
 
 ## Data flow
 
@@ -139,10 +152,17 @@ fix-cron/
     deadman/     deadman assessment (CollapseFiles, Assess, Missed, Emit)
     rehome/      dry-run re-home planner (Plan, Emit)
     cronlint/    prevention lint (ParseCrons, Lint, Config, Emit)
+    cronguard/   identity gate: bot-only cron changes (Guard, Emit)
+    registry/    central cron catalog (Entry, Load, Upsert, Save, Validate)
+    intake/      issue-form -> validated CronRequest (Parse, Validate)
+    cronbot/     intake brain: request -> provisioning Plan (BuildPlan)
   cmd/
     deadman/     deadman CLI
     rehome/      re-home CLI
     cronlint/    prevention-lint CLI
+    cronguard/   identity-gate required check
+    cronbot/     intake brain CLI (validate + plan + registry upsert)
+  ci/            enterprise rollout templates (issue form, workflows, ruleset)
 ```
 
 Each package has a sibling `*_test.go`. Go's built-in `testing`.
@@ -161,6 +181,12 @@ go run ./cmd/rehome --json-out ../reports/cron/rehome_plan.json
 go run ./cmd/cronlint --registry cron-registry.txt path/to/.github/workflows/foo.yml
 go run ./cmd/cronlint --ban-all --allow 'vendor/**' --dir ..
 go run ./cmd/cronlint --list-touched --dir ..
+
+# identity gate (required check): block non-bot cron changes
+go run ./cmd/cronguard --actor "$PR_AUTHOR" --base origin/main path/to/.github/workflows/foo.yml
+
+# intake brain: validate a request, plan it, upsert the central registry
+go run ./cmd/cronbot --issue-body issue.md --request-url URL --registry registry.json
 
 go test ./...
 ```
@@ -183,7 +209,8 @@ violations, so it works as a required CI check.
 ## Future work (out of scope for this prototype)
 
 - Apply mode: open a draft PR per repo for the re-home edit.
-- A li-cron bot-merge action that consumes `cronlint --list-touched` and
-  lands cron PRs as the durable account.
+- Live landing step in `ci/intake.yml`: have the li-cron App merge the
+  developer's PR (or author the workflow). Needs an App token + a target repo,
+  so it stays a marked TODO in the template.
+- Identity gate: check the commit author, not just the PR author.
 - Real alert sinks: Slack, GitHub issues.
-- A cron registry: expected cadence and owning team as the source of truth.
