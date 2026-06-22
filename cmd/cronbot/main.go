@@ -30,6 +30,7 @@ func main() {
 	requestURL := flag.String("request-url", "", "URL of the request issue (recorded in the registry)")
 	registryPath := flag.String("registry", "", "central registry JSON to upsert into (omit to skip the write)")
 	jsonOut := flag.String("json-out", "", "write the plan as JSON to this path")
+	remove := flag.Bool("remove", false, "process a removal request: de-register instead of register")
 	flag.Parse()
 
 	body, err := readBody(*bodyPath)
@@ -39,6 +40,12 @@ func main() {
 	}
 
 	req := intake.Parse(body)
+
+	if *remove {
+		runRemoval(req, *requestURL, *registryPath, *jsonOut)
+		return
+	}
+
 	if errs := req.Validate(); len(errs) > 0 {
 		fmt.Fprintln(os.Stderr, "Invalid cron request:")
 		for _, e := range errs {
@@ -88,6 +95,58 @@ func readBody(path string) (string, error) {
 	}
 	b, err := os.ReadFile(path)
 	return string(b), err
+}
+
+// runRemoval validates an approved removal request, prints the removal plan, and
+// (when --registry is given) de-registers the cron from the central catalog. The
+// workflow performs the target-repo schedule deletion as the li-cron App.
+func runRemoval(req intake.CronRequest, requestURL, registryPath, jsonOut string) {
+	if errs := req.ValidateRemoval(); len(errs) > 0 {
+		fmt.Fprintln(os.Stderr, "Invalid cron removal request:")
+		for _, e := range errs {
+			fmt.Fprintln(os.Stderr, "  -", e)
+		}
+		os.Exit(1)
+	}
+
+	plan := cronbot.BuildRemovalPlan(req, requestURL)
+	printRemovalPlan(plan, os.Stdout)
+
+	if registryPath != "" {
+		reg, err := registry.Load(registryPath)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "load registry:", err)
+			os.Exit(2)
+		}
+		if reg.Remove(plan.RegistryKey) {
+			if err := reg.Save(registryPath); err != nil {
+				fmt.Fprintln(os.Stderr, "save registry:", err)
+				os.Exit(2)
+			}
+			fmt.Fprintf(os.Stdout, "\nregistry de-registered: %s\n", plan.RegistryKey)
+		} else {
+			fmt.Fprintf(os.Stdout, "\nregistry: %s was not tracked (nothing to de-register)\n", plan.RegistryKey)
+		}
+	}
+
+	if jsonOut != "" {
+		b, err := json.MarshalIndent(plan, "", "  ")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "marshal plan:", err)
+			os.Exit(2)
+		}
+		if err := os.WriteFile(jsonOut, append(b, '\n'), 0o644); err != nil {
+			fmt.Fprintln(os.Stderr, "write plan:", err)
+			os.Exit(2)
+		}
+	}
+}
+
+func printRemovalPlan(p cronbot.RemovalPlan, w io.Writer) {
+	fmt.Fprintf(w, "Cron removal: %s :: %s\n", p.Repo, p.Path)
+	fmt.Fprintf(w, "  de-register: %s\n", p.RegistryKey)
+	fmt.Fprintf(w, "  branch     : %s\n", p.Branch)
+	fmt.Fprintf(w, "  merge      : %s\n", p.MergeMethod)
 }
 
 func printPlan(p cronbot.Plan, w io.Writer) {

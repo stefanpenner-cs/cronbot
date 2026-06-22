@@ -51,3 +51,23 @@ func TestBuildPlanNoSafeRewriteKeepsExpr(t *testing.T) {
 		t.Fatalf("no-rewrite should keep the expr, got new=%q old=%q", p.NewExpr, p.OldExpr)
 	}
 }
+
+func TestBuildRemovalPlan(t *testing.T) {
+	r := req()
+	p := BuildRemovalPlan(r, "https://github.com/o/r/issues/9")
+	if p.Repo != r.Repo || p.Path != r.Path {
+		t.Fatalf("repo/path not carried: %#v", p)
+	}
+	if p.RegistryKey != "linkedin-actions/foo::.github/workflows/nightly.yml" {
+		t.Fatalf("unexpected registry key: %q", p.RegistryKey)
+	}
+	if p.Branch != "li-cron/remove-linkedin-actions-foo-github-workflows-nightly-yml" {
+		t.Fatalf("unexpected branch: %q", p.Branch)
+	}
+	if p.MergeMethod == "" || p.PRTitle == "" || p.CommitMessage == "" {
+		t.Fatalf("plan fields not populated: %#v", p)
+	}
+	if p.Request != "https://github.com/o/r/issues/9" {
+		t.Fatalf("request url not carried: %q", p.Request)
+	}
+}

@@ -25,6 +25,7 @@ var headerField = map[string]func(*CronRequest, string){
 	"workflow path":     func(r *CronRequest, v string) { r.Path = v },
 	"cron expression":   func(r *CronRequest, v string) { r.Expr = v },
 	"justification":     func(r *CronRequest, v string) { r.Justification = v },
+	"reason":            func(r *CronRequest, v string) { r.Justification = v },
 }
 
 var repoRE = regexp.MustCompile(`^[^/\s]+/[^/\s]+$`)
@@ -74,6 +75,23 @@ func (r CronRequest) Validate() []error {
 	}
 	if len(strings.Fields(r.Expr)) != 5 {
 		errs = append(errs, fmt.Errorf("cron expression %q must be 5 fields", r.Expr))
+	}
+	return errs
+}
+
+// ValidateRemoval checks a removal request. Removal does not need a cron
+// expression (we drop whatever schedule the file has), but it does need a reason
+// for the audit trail, since stopping a scheduled job is a functional change.
+func (r CronRequest) ValidateRemoval() []error {
+	var errs []error
+	if !repoRE.MatchString(r.Repo) {
+		errs = append(errs, fmt.Errorf("target repository %q must be owner/name", r.Repo))
+	}
+	if !workflowRE.MatchString(r.Path) {
+		errs = append(errs, fmt.Errorf("workflow path %q must be .github/workflows/*.yml", r.Path))
+	}
+	if strings.TrimSpace(r.Justification) == "" {
+		errs = append(errs, fmt.Errorf("a reason for removal is required"))
 	}
 	return errs
 }

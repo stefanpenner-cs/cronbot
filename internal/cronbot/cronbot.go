@@ -36,6 +36,37 @@ type Plan struct {
 	Entry         registry.Entry `json:"entry"`
 }
 
+// RemovalPlan is everything the intake workflow needs to retire a managed cron:
+// the central-registry key to de-register and the bot-authored edit that deletes
+// the schedule from the target workflow. Like BuildPlan, it is pure and testable;
+// the workflow performs the git/PR/merge as the li-cron App.
+type RemovalPlan struct {
+	Repo          string `json:"repo"`
+	Path          string `json:"path"`
+	RegistryKey   string `json:"registry_key"`
+	Branch        string `json:"branch"`
+	PRTitle       string `json:"pr_title"`
+	CommitMessage string `json:"commit_message"`
+	MergeMethod   string `json:"merge_method"`
+	Request       string `json:"request"`
+}
+
+// BuildRemovalPlan computes the plan to retire an approved cron. De-registering
+// is the tested, automated part; the workflow deletes the schedule line in the
+// target repo and merges as li-cron[bot].
+func BuildRemovalPlan(req intake.CronRequest, requestURL string) RemovalPlan {
+	return RemovalPlan{
+		Repo:          req.Repo,
+		Path:          req.Path,
+		RegistryKey:   registry.Key(req.Repo, req.Path),
+		Branch:        "li-cron/remove-" + slug(req.Repo+"-"+req.Path),
+		PRTitle:       "chore(cron): remove managed schedule for " + req.Path,
+		CommitMessage: "chore(cron): retire " + req.Path + " cron (de-homed from li-cron[bot])",
+		MergeMethod:   rehome.MergeMethod,
+		Request:       requestURL,
+	}
+}
+
 var nonSlug = regexp.MustCompile(`[^a-z0-9]+`)
 
 func slug(s string) string {

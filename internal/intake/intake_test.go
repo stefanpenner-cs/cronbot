@@ -55,3 +55,40 @@ func TestValidateBad(t *testing.T) {
 		t.Fatalf("want 3 errors, got %d: %v", len(errs), errs)
 	}
 }
+
+func TestValidateRemovalRequiresRepoPathReason(t *testing.T) {
+	ok := CronRequest{
+		Repo: "linkedin-actions/foo", Path: ".github/workflows/nightly.yml",
+		Justification: "service retired",
+	}
+	if errs := ok.ValidateRemoval(); len(errs) != 0 {
+		t.Fatalf("valid removal should pass, got %v", errs)
+	}
+}
+
+func TestValidateRemovalIgnoresExpr(t *testing.T) {
+	r := CronRequest{
+		Repo: "linkedin-actions/foo", Path: ".github/workflows/nightly.yml",
+		Justification: "service retired",
+		// no Expr — removal does not need one
+	}
+	if errs := r.ValidateRemoval(); len(errs) != 0 {
+		t.Fatalf("removal must not require a cron expression, got %v", errs)
+	}
+}
+
+func TestValidateRemovalReportsMissingFields(t *testing.T) {
+	r := CronRequest{Repo: "bad", Path: "nope", Justification: ""}
+	errs := r.ValidateRemoval()
+	if len(errs) != 3 {
+		t.Fatalf("want 3 errors (repo, path, reason), got %d: %v", len(errs), errs)
+	}
+}
+
+func TestParseReasonAliasesJustification(t *testing.T) {
+	body := "### Target repository\n\nacme/web\n\n### Workflow path\n\n.github/workflows/nightly.yml\n\n### Reason\n\nService retired.\n"
+	req := Parse(body)
+	if req.Justification != "Service retired." {
+		t.Fatalf("'Reason' should map to Justification, got %q", req.Justification)
+	}
+}

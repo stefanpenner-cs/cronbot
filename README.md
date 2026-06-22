@@ -29,15 +29,16 @@ A human who edits a cron directly is stopped by `cronguard` and sent here.
 
 ## How a cron gets removed
 
-Removing a cron is safe — once the schedule is gone, nothing runs, so there is
-no actor to mis-own. So removal is simple:
+Removing a cron is safe — once the schedule is gone, nothing runs. So there are
+two ways:
 
-1. Delete the `schedule:` cron from the workflow. `cronguard` allows this; no
-   request needed.
-2. `cronreconcile` runs (on a schedule, as the bot) and drops the now-missing
-   cron from the central registry.
+- Self-service (fast): delete the `schedule:` cron from the workflow yourself.
+  `cronguard` allows removals. `cronreconcile` then drops it from the registry.
+- Webform (reviewed): file a `cron-removal` issue. Stopping a job is a real
+  change, so the same crew signs off, then `li-cron[bot]` deletes the schedule
+  and de-registers it.
 
-So adds are gated and signed-off; removes are free, then the catalog self-heals.
+So adds are always gated; removes can be free (self-service) or reviewed (form).
 
 ## See it live
 
