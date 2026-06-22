@@ -1,0 +1,54 @@
+name: cron-policy
+description: >-
+  Block scheduled workflows (cron) that are not registered or allow-listed.
+  Runs the fix-cron cronlint check over the calling repository.
+
+inputs:
+  registry:
+    description: Repo-relative path to the cron registry file.
+    default: .github/cron-registry.txt
+  ban-all:
+    description: Reject every cron (registry ignored; allow-list still exempts).
+    default: "false"
+  allow:
+    description: Newline-separated allow-list globs (** spans directories).
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-go@v5
+      with:
+        go-version: "1.24"
+    - shell: bash
+      env:
+        REGISTRY: ${{ inputs.registry }}
+        BAN_ALL: ${{ inputs.ban-all }}
+        ALLOW: ${{ inputs.allow }}
+      run: |
+        set -euo pipefail
+
+        # Lint every workflow in the calling repo (checked out at the workspace).
+        args=(--dir "$GITHUB_WORKSPACE")
+
+        if [ "$BAN_ALL" = "true" ]; then
+          args+=(--ban-all)
+        fi
+
+        reg="$GITHUB_WORKSPACE/$REGISTRY"
+        if [ -f "$reg" ]; then
+          args+=(--registry "$reg")
+        fi
+
+        while IFS= read -r pat; do
+          [ -n "$pat" ] && args+=(--allow "$pat")
+        done <<< "$ALLOW"
+
+        # Find the cronlint Go module (parent dir holding go.mod), layout-agnostic.
+        moddir="$GITHUB_ACTION_PATH"
+        while [ ! -f "$moddir/go.mod" ] && [ "$moddir" != "/" ]; do
+          moddir="$(dirname "$moddir")"
+        done
+        cd "$moddir"
+
+        go run ./cmd/cronlint "${args[@]}"

@@ -1,0 +1,29 @@
+{
+  "name": "cron-policy",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": ["~DEFAULT_BRANCH"],
+      "exclude": []
+    },
+    "repository_name": {
+      "include": ["~ALL"],
+      "exclude": []
+    }
+  },
+  "rules": [
+    {
+      "type": "workflows",
+      "parameters": {
+        "workflows": [
+          {
+            "repository_id": 0,
+            "path": ".github/workflows/cron-policy.yml",
+            "ref": "refs/heads/main"
+          }
+        ]
+      }
+    }
+  ]
+}

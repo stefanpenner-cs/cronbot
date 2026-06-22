@@ -1,0 +1,7 @@
+# Cron registry — one workflow path per line.
+# A scheduled workflow must be listed here (or allow-listed) to pass cronlint.
+# Adding a line is a reviewed PR, so the reviewer is the owner on record.
+# Blank lines and # comments are ignored.
+
+.github/workflows/nightly-backup.yml
+.github/workflows/weekly-report.yml

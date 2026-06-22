@@ -108,6 +108,10 @@ get there by stacking:
 3. Backstop (eventual). `cmd/deadman` + `cmd/rehome` sweep anything that
    slips: admin bypass, repos not yet on the policy.
 
+Enterprise rollout (one shared tool repo, per-repo registry, one ruleset per
+org) is spelled out in `ci/README.md`, with ready-to-publish templates:
+`ci/action.yml`, `ci/required-workflow.yml`, `ci/org-ruleset.example.json`.
+
 ## Data flow
 
 Both tools reuse the existing pipeline. They fetch nothing new.

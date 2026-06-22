@@ -1,0 +1,25 @@
+# Standalone workflow that orgs register as a REQUIRED workflow (via a ruleset).
+# GitHub injects this file into every targeted repo's pull requests; the repo
+# does not need to add anything itself.
+#
+# Replace OWNER/cron-policy@v1 with the real published location of this action.
+name: cron-policy
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  cron-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: linkedin-actions/cron-policy/ci@v1
+        with:
+          # Start lenient: registry-based. Flip ban-all to "true" to forbid all
+          # crons, or pass allow globs for vendored/mirrored workflows.
+          registry: .github/cron-registry.txt
+          ban-all: "false"
+          allow: ""
