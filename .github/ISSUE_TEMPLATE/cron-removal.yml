@@ -29,7 +29,7 @@ body:
     attributes:
       label: Workflow path
       description: Path to the workflow file whose schedule should be removed.
-      placeholder: .github/workflows/nightly.yml
+      placeholder: .github/workflows/stale.yml
     validations:
       required: true
   - type: textarea
