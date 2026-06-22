@@ -8,13 +8,12 @@ Make GitHub Actions crons durable, watched, and managed.
 - That person leaves. The cron goes quiet. No one is told.
 - No owner. No alert. No health check.
 
-## The fix: five small Go tools
+## The fix: four small Go tools
 
 - `rehome` — move a cron onto a durable bot account, without changing when it runs.
 - `deadman` — find crons that have gone quiet, and alert.
-- `cronguard` — block any human cron change. Only `cron-bot[bot]` may merge one.
+- `cronguard` — block any human cron change (add, edit, or remove). Only `cron-bot[bot]` may merge one.
 - `cronbot` — turn a cron-request issue into a safe, registered plan.
-- `cronreconcile` — de-register crons that were deleted, so the catalog stays honest.
 
 All dry-run or check-only. Nothing here writes to your repos on its own.
 
@@ -25,25 +24,23 @@ All dry-run or check-only. Nothing here writes to your repos on its own.
 3. The crew signs off.
 4. `cron-bot[bot]` lands it. Now the bot owns it. It is durable.
 
-A human who edits a cron directly is stopped by `cronguard` and sent here.
+A human who adds, edits, or deletes a cron directly is stopped by `cronguard`
+and sent here.
 
 ## How a cron gets removed
 
-Removing a cron is safe — once the schedule is gone, nothing runs. So there are
-two ways:
+There is one way: file a `cron-removal` issue. `cronguard` blocks you from
+deleting a managed cron yourself, so removal goes through the same gate as adds.
+Stopping a job is a real change, so the crew signs off, then `cron-bot[bot]`
+deletes the schedule and de-registers it.
 
-- Self-service (fast): delete the `schedule:` cron from the workflow yourself.
-  `cronguard` allows removals. `cronreconcile` then drops it from the registry.
-- Webform (reviewed): file a `cron-removal` issue. Stopping a job is a real
-  change, so the same crew signs off, then `cron-bot[bot]` deletes the schedule
-  and de-registers it.
-
-So adds are always gated; removes can be free (self-service) or reviewed (form).
+Because every change — add, edit, or remove — goes through the bot, the registry
+never drifts from what is really running.
 
 ## Sequence diagrams
 
 How a request flows from issue to durable cron. Same form, same jobs for add and
-update; remove has its own form plus a free self-service path.
+update; remove has its own form. Every path goes through `cron-bot[bot]`.
 
 ### Add
 
@@ -106,7 +103,8 @@ sequenceDiagram
 
 ### Remove
 
-Two paths. The reviewed webform, or a free self-service delete.
+One gated path: the `cron-removal` webform. `cronguard` blocks a human from
+deleting a managed cron, so only the bot retires it.
 
 ```mermaid
 sequenceDiagram
@@ -119,24 +117,18 @@ sequenceDiagram
     participant App as cron-bot[bot]
     participant Repo as target repo
     participant Reg as registry.json
-    participant Recon as cronreconcile
 
-    alt reviewed (webform)
-        Dev->>Form: open (repo, path, reason)
-        Form->>CI: on issues -> validate-removal job
-        CI->>Bot: --remove --dry-run: ValidateRemoval
-        Bot-->>Form: comment "valid" + plan
-        Note over CI,Crew: provision-removal waits on the<br/>cron-approval environment
-        Crew->>CI: approve
-        CI->>Bot: --remove --apply
-        Bot->>Reg: Remove(key)
-        App->>Repo: delete the schedule line, merge as the bot
-        CI-->>Form: close "Retired by cron-bot[bot]"
-    else self-service (free)
-        Dev->>Repo: delete the schedule line yourself
-        Note over Repo: cronguard allows removals<br/>(no new cron is added)
-        Recon->>Reg: Reconcile prunes the now-absent key
-    end
+    Dev->>Form: open (repo, path, reason)
+    Form->>CI: on issues -> validate-removal job
+    CI->>Bot: --remove --dry-run: ValidateRemoval
+    Bot-->>Form: comment "valid" + plan
+    Note over CI,Crew: provision-removal waits on the<br/>cron-approval environment
+    Crew->>CI: approve
+    CI->>Bot: --remove --apply
+    Bot->>Reg: Remove(key)
+    App->>Repo: delete the schedule line, merge as the bot
+    CI-->>Form: close "Retired by cron-bot[bot]"
+    Note over Dev,Repo: a human deleting the line directly is<br/>blocked by cronguard and sent to this form
 ```
 
 
@@ -157,7 +149,6 @@ go run ./cmd/deadman          # quiet-cron report
 go run ./cmd/rehome           # re-home plan (dry-run)
 go run ./cmd/cronbot --issue-body issue.md --request-url URL
 go run ./cmd/cronguard --actor "$PR_AUTHOR" --base origin/main path/to/workflow.yml
-go run ./cmd/cronreconcile --registry registry.json --crons crons.json --dry-run
 ```
 
 ## More

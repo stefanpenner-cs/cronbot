@@ -13,9 +13,8 @@ body:
         the same way adds are: file this request; the cron-reviewers
         crew signs off; cron-bot deletes the schedule and de-registers the cron.
 
-        Faster path for self-service: you may also just delete the `schedule:`
-        cron from the workflow yourself (the identity gate allows removals), and
-        the reconcile job will de-register it on its next run.
+        The identity gate blocks you from deleting the schedule yourself, so this
+        form is the only way to retire a managed cron.
   - type: input
     id: target-repository
     attributes:

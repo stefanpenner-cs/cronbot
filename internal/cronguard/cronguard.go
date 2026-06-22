@@ -1,10 +1,11 @@
-// Package cronguard is the identity gate: the required CI check that blocks a
-// cron value from being added or changed unless the change is authored by an
-// allowed actor (cron-bot[bot]). Humans are forced through the intake bot.
+// Package cronguard is the identity gate: the required CI check that blocks any
+// human-authored cron change unless the change is authored by an allowed actor
+// (cron-bot[bot]). Humans are forced through the intake bot for adds, edits, and
+// removals alike.
 //
-// It is diff-aware. A cron VALUE change looks like "old value removed, new value
-// added", so the gate fires on any cron expression present in HEAD but not in
-// BASE. Removing a cron (cleanup) is always allowed.
+// It is diff-aware. It fires on any cron expression that differs between BASE
+// and HEAD: added/changed (in HEAD, not BASE) or removed (in BASE, not HEAD).
+// Removing a cron also goes through the bot, so the registry never drifts.
 package cronguard
 
 import (
@@ -52,9 +53,10 @@ func isAllowed(actor string, allowed []string) bool {
 	return false
 }
 
-// Guard returns a violation for every cron expression that appears in a file's
-// head but not its base, when actor is not allowed. If allowed is empty,
-// DefaultAllowed is used.
+// Guard returns a violation for every cron expression a non-allowed actor adds
+// (present in head, not base) or removes (present in base, not head). The bot
+// retires crons through the gated removal flow, so its deletes pass. If allowed
+// is empty, DefaultAllowed is used.
 func Guard(diffs []FileDiff, actor string, allowed []string) []Violation {
 	if len(allowed) == 0 {
 		allowed = DefaultAllowed
@@ -62,24 +64,42 @@ func Guard(diffs []FileDiff, actor string, allowed []string) []Violation {
 	if isAllowed(actor, allowed) {
 		return nil
 	}
+	allowList := strings.Join(allowed, ", ")
 	var out []Violation
 	for _, d := range diffs {
 		base := exprSet(d.Base)
-		var added []string
-		for expr := range exprSet(d.Head) {
+		head := exprSet(d.Head)
+		var added, removed []string
+		for expr := range head {
 			if !base[expr] {
 				added = append(added, expr)
 			}
 		}
+		for expr := range base {
+			if !head[expr] {
+				removed = append(removed, expr)
+			}
+		}
 		sort.Strings(added)
+		sort.Strings(removed)
 		for _, expr := range added {
 			out = append(out, Violation{
 				Path:  d.Path,
 				Expr:  expr,
 				Actor: actor,
 				Message: fmt.Sprintf(
-					"cron added/changed by %q; only %s may merge cron changes — file a cron request instead",
-					actor, strings.Join(allowed, ", ")),
+					"cron added/changed by %q; only %s may change crons — file a cron request instead",
+					actor, allowList),
+			})
+		}
+		for _, expr := range removed {
+			out = append(out, Violation{
+				Path:  d.Path,
+				Expr:  expr,
+				Actor: actor,
+				Message: fmt.Sprintf(
+					"cron removed by %q; only %s may remove crons — file a cron-removal request first",
+					actor, allowList),
 			})
 		}
 	}

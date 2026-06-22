@@ -1,5 +1,5 @@
-// Command cronguard is the identity-gate required check. It fails a PR that adds
-// or changes a cron value unless the PR author is an allowed actor
+// Command cronguard is the identity-gate required check. It fails a PR that adds,
+// changes, or removes a cron unless the PR author is an allowed actor
 // (cron-bot[bot]), forcing humans through the intake bot.
 //
 // It compares each changed workflow file's content at --base (a git ref) with

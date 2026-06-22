@@ -27,15 +27,25 @@ func TestNewCronByBotPasses(t *testing.T) {
 func TestChangedValueByHumanFails(t *testing.T) {
 	diffs := []FileDiff{{Path: "w.yml", Base: cronA, Head: cronB}}
 	v := Guard(diffs, "alice_EMU", nil)
-	if len(v) != 1 || v[0].Expr != "0 10 * * *" {
-		t.Fatalf("changing a cron value should fail on the new value, got %#v", v)
+	// A value change is an add of the new value plus a removal of the old one;
+	// both are blocked for a human.
+	got := map[string]bool{}
+	for _, x := range v {
+		got[x.Expr] = true
+	}
+	if len(v) != 2 || !got["0 9 * * *"] || !got["0 10 * * *"] {
+		t.Fatalf("changing a cron value should flag old and new, got %#v", v)
 	}
 }
 
-func TestRemovedCronPasses(t *testing.T) {
+func TestRemovedCronByHumanFails(t *testing.T) {
 	diffs := []FileDiff{{Path: "w.yml", Base: cronA, Head: "on:\n  push: {}\n"}}
-	if v := Guard(diffs, "alice_EMU", nil); len(v) != 0 {
-		t.Fatalf("removing a cron should be allowed, got %#v", v)
+	v := Guard(diffs, "alice_EMU", nil)
+	if len(v) != 1 || v[0].Expr != "0 9 * * *" {
+		t.Fatalf("a human removing a cron should be blocked, got %#v", v)
+	}
+	if !strings.Contains(v[0].Message, "cron-removal request") {
+		t.Fatalf("removal message should point to the removal request, got %q", v[0].Message)
 	}
 }
 
@@ -53,10 +63,18 @@ func TestAllowedActorCaseInsensitive(t *testing.T) {
 	}
 }
 
-func TestRemovingCronIsAllowed(t *testing.T) {
+func TestRemovingCronByHumanFails(t *testing.T) {
 	diffs := []FileDiff{{Path: "w.yml", Base: cronA, Head: ""}}
-	if v := Guard(diffs, "alice_EMU", nil); len(v) != 0 {
-		t.Fatalf("removing a cron should pass, got %#v", v)
+	if v := Guard(diffs, "alice_EMU", nil); len(v) != 1 {
+		t.Fatalf("a human deleting a cron file should be blocked, got %#v", v)
+	}
+}
+
+func TestRemovingCronByBotPasses(t *testing.T) {
+	// The bot retires crons via the gated removal flow, so its deletes must pass.
+	diffs := []FileDiff{{Path: "w.yml", Base: cronA, Head: ""}}
+	if v := Guard(diffs, "cron-bot[bot]", nil); len(v) != 0 {
+		t.Fatalf("the bot removing a cron should pass, got %#v", v)
 	}
 }
 
