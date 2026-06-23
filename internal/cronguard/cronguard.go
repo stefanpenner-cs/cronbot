@@ -14,7 +14,7 @@ import (
 	"sort"
 	"strings"
 
-	"fixcron/internal/cronlint"
+	"cronbot/internal/cronlint"
 )
 
 // DefaultAllowed is the actor permitted to add or change crons.

@@ -4,6 +4,11 @@
 #
 # It fails any PR that adds or changes a cron value unless the PR author is
 # cron-bot[bot]. Humans are forced through the cron-intake issue flow.
+#
+# SECURITY: cronguard is built from the cronbot repo (trusted source), NOT from
+# the target repo's checkout. A malicious fork PR cannot supply its own
+# cronguard binary. The built binary runs in the target repo's working tree so
+# `git show` and file reads resolve against the PR's files.
 name: cron-policy
 
 on:
@@ -16,13 +21,30 @@ jobs:
   identity-gate:
     runs-on: ubuntu-latest
     steps:
-      # Need full history so we can diff the cron against the base ref.
+      # Check out the PR's repo for diffing. We only READ from this checkout.
+      # Pin fetch-depth so we can diff against the base ref.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      # Check out cronbot separately to build the gate binary from trusted code.
+      # For production, pin this to a release tag SHA instead of `main`.
+      - name: Checkout cronbot (trusted gate source)
+        uses: actions/checkout@v4
+        with:
+          repository: stefanpenner-cs/cronbot
+          path: _cronbot
+          ref: main
+
       - uses: actions/setup-go@v5
         with:
           go-version: "1.24"
+          cache-dependency-path: _cronbot/go.mod
+
+      - name: Build cronguard from trusted source
+        working-directory: _cronbot
+        run: go build -o /tmp/cronguard ./cmd/cronguard
+
       - name: Cron identity gate
         env:
           ACTOR: ${{ github.event.pull_request.user.login }}
@@ -37,4 +59,6 @@ jobs:
             echo "No workflow files changed."
             exit 0
           fi
-          go run ./cmd/cronguard --actor "$ACTOR" --base "origin/$BASE" $files
+          # Run the trusted binary in the target repo's working tree so git
+          # show and file reads resolve against the PR's files.
+          /tmp/cronguard --actor "$ACTOR" --base "origin/$BASE" $files

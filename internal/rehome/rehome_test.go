@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"fixcron/internal/inventory"
+	"cronbot/internal/inventory"
 )
 
 func cron(repo, path, expr, state string) inventory.Cron {

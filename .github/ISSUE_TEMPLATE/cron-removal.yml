@@ -9,12 +9,18 @@ body:
   - type: markdown
     attributes:
       value: |
-        Stopping a scheduled job is a functional change, so removal is reviewed
-        the same way adds are: file this request; the cron-reviewers
-        crew signs off; cron-bot deletes the schedule and de-registers the cron.
+        Stopping a scheduled job is a functional change, so removal goes through
+        the same gate as adds:
 
-        The identity gate blocks you from deleting the schedule yourself, so this
-        form is the only way to retire a managed cron.
+        1. 🤖 Bot validates your removal request
+        2. 👥 `cron-reviewers` signs off
+        3. 🚀 `cron-bot[bot]` deletes the schedule and de-registers it
+        4. ✅ Done — the cron is retired
+
+        The identity gate blocks you from deleting the schedule yourself, so
+        this form is the only way to retire a managed cron.
+
+        Track the status via labels: `cron-valid` 🟢 → `cron-landing` 🟡 → `cron-landed` 🟢
   - type: input
     id: target-repository
     attributes:

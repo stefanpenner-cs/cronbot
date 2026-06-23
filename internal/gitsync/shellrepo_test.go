@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"fixcron/internal/registry"
+	"cronbot/internal/registry"
 )
 
 // --- real-git integration tests ------------------------------------------------
@@ -79,7 +79,7 @@ func remoteEntries(t *testing.T, remote string) []registry.Entry {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return reg.Entries
+	return reg.All()
 }
 
 func shellRepo(dir string) *ShellRepo {

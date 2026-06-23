@@ -123,3 +123,34 @@ func TestRemoveAbsentIsNoop(t *testing.T) {
 		t.Fatalf("absent remove must not change the catalog, got %d", len(r.Entries))
 	}
 }
+
+func TestGetReturnsEntry(t *testing.T) {
+	r := &Registry{}
+	r.Upsert(sample())
+	e, ok := r.Get(sample().Key())
+	if !ok || e.Repo != sample().Repo {
+		t.Fatalf("Get should return the entry, got %#v ok=%v", e, ok)
+	}
+	if _, ok := r.Get("missing/repo::.github/workflows/x.yml"); ok {
+		t.Fatal("Get should return false for absent key")
+	}
+}
+
+func TestLenAndAll(t *testing.T) {
+	r := &Registry{}
+	if r.Len() != 0 {
+		t.Fatalf("empty registry Len = %d, want 0", r.Len())
+	}
+	r.Upsert(sample())
+	if r.Len() != 1 {
+		t.Fatalf("Len = %d, want 1", r.Len())
+	}
+	all := r.All()
+	if len(all) != 1 || all[0].Repo != sample().Repo {
+		t.Fatalf("All should return a copy, got %#v", all)
+	}
+	all[0].Repo = "mutated"
+	if r.Entries[0].Repo == "mutated" {
+		t.Fatal("All should return a copy, not a reference")
+	}
+}

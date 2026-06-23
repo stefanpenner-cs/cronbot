@@ -8,9 +8,9 @@ import (
 	"io"
 	"sort"
 
-	"fixcron/internal/actor"
-	"fixcron/internal/cronequiv"
-	"fixcron/internal/inventory"
+	"cronbot/internal/actor"
+	"cronbot/internal/cronequiv"
+	"cronbot/internal/inventory"
 )
 
 // How a re-home edit must land to re-attribute the actor (cron-debugging

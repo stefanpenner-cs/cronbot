@@ -24,10 +24,10 @@ import (
 	"io"
 	"os"
 
-	"fixcron/internal/cronbot"
-	"fixcron/internal/gitsync"
-	"fixcron/internal/intake"
-	"fixcron/internal/registry"
+	"cronbot/internal/cronbot"
+	"cronbot/internal/gitsync"
+	"cronbot/internal/intake"
+	"cronbot/internal/registry"
 )
 
 // commitConfig controls the optional commit-and-push of the registry change.
@@ -38,6 +38,7 @@ type commitConfig struct {
 }
 
 func main() {
+	validateRegistry := flag.String("validate-registry", "", "validate a registry.json file and exit (0 = ok, 1 = errors)")
 	bodyPath := flag.String("issue-body", "-", "issue-form body file ('-' or empty = stdin)")
 	requestURL := flag.String("request-url", "", "URL of the request issue (recorded in the registry)")
 	registryPath := flag.String("registry", "", "central registry JSON to upsert into (omit to skip the write)")
@@ -52,6 +53,12 @@ func main() {
 	gitName := flag.String("git-name", "cron-bot[bot]", "commit author/committer name for --commit-push")
 	gitEmail := flag.String("git-email", "cron-bot[bot]@users.noreply.github.com", "commit author/committer email for --commit-push")
 	flag.Parse()
+
+	// --validate-registry: standalone check, no issue body needed.
+	if *validateRegistry != "" {
+		runValidateRegistry(*validateRegistry)
+		return
+	}
 
 	co := commitConfig{
 		enabled: *commitPush, gitDir: *gitDir, remote: *remote, branch: *branch,
@@ -128,6 +135,26 @@ func readBody(path string) (string, error) {
 	}
 	b, err := os.ReadFile(path)
 	return string(b), err
+}
+
+// runValidateRegistry loads a registry file, validates every entry, and exits
+// 0 if clean or 1 with a list of errors.
+func runValidateRegistry(path string) {
+	reg, err := registry.Load(path)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "load %s: %v\n", path, err)
+		os.Exit(1)
+	}
+	errs := reg.Validate()
+	if len(errs) == 0 {
+		fmt.Printf("registry OK: %d entries\n", reg.Len())
+		return
+	}
+	fmt.Println("registry has errors:")
+	for _, e := range errs {
+		fmt.Println("  -", e)
+	}
+	os.Exit(1)
 }
 
 // runRemoval validates an approved removal request, prints the removal plan, and

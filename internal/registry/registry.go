@@ -5,7 +5,7 @@
 // encodes it (see cronsched.IntervalDays).
 //
 // Stored as a JSON array to keep the module dependency-free (matching the rest
-// of fixcron). One entry per (repo, path).
+// of cronbot). One entry per (repo, path).
 package registry
 
 import (
@@ -15,6 +15,8 @@ import (
 	"os"
 	"sort"
 	"strings"
+
+	"cronbot/internal/key"
 )
 
 // Entry is one managed cron.
@@ -32,9 +34,30 @@ type Registry struct {
 }
 
 // Key identifies an entry.
-func Key(repo, path string) string { return repo + "::" + path }
+func Key(repo, path string) string { return key.Cron(repo, path) }
 
 func (e Entry) Key() string { return Key(e.Repo, e.Path) }
+
+// Get returns the entry for key, or false if none.
+func (r *Registry) Get(key string) (Entry, bool) {
+	for _, e := range r.Entries {
+		if e.Key() == key {
+			return e, true
+		}
+	}
+	return Entry{}, false
+}
+
+// Len returns the number of entries.
+func (r *Registry) Len() int { return len(r.Entries) }
+
+// All returns a copy of the entries slice (safe for callers to iterate
+// without risking mutation by a concurrent Upsert/Remove).
+func (r *Registry) All() []Entry {
+	out := make([]Entry, len(r.Entries))
+	copy(out, r.Entries)
+	return out
+}
 
 // Load reads a registry JSON file. A missing file is an empty registry.
 func Load(path string) (*Registry, error) {
@@ -45,6 +68,11 @@ func Load(path string) (*Registry, error) {
 	if err != nil {
 		return nil, err
 	}
+	return LoadFromBytes(b)
+}
+
+// LoadFromBytes parses registry JSON bytes into a Registry.
+func LoadFromBytes(b []byte) (*Registry, error) {
 	var entries []Entry
 	if len(b) > 0 {
 		if err := json.Unmarshal(b, &entries); err != nil {

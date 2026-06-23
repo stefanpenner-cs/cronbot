@@ -11,14 +11,16 @@ package actor
 import (
 	"regexp"
 	"strings"
+	"sync"
 )
 
-// EMUSuffix is your GitHub Enterprise Managed User handle suffix (e.g. "_acme").
+// emuSuffix is the GitHub Enterprise Managed User handle suffix (e.g. "_acme").
 // Personal EMU logins end with it; set it for your enterprise via SetEMUSuffix.
-var EMUSuffix = "_EMU"
-
-// A deprovisioned EMU handle anonymizes to a long hex hash + EMUSuffix.
-var anonRE = compileAnon(EMUSuffix)
+var (
+	mu        sync.RWMutex
+	emuSuffix = "_EMU"
+	anonRE    = compileAnon(emuSuffix)
+)
 
 func compileAnon(suffix string) *regexp.Regexp {
 	return regexp.MustCompile(`^[0-9a-f]{20,}` + regexp.QuoteMeta(suffix) + `$`)
@@ -27,8 +29,17 @@ func compileAnon(suffix string) *regexp.Regexp {
 // SetEMUSuffix overrides the enterprise EMU handle suffix used to tell a personal
 // (human) account from an external one.
 func SetEMUSuffix(suffix string) {
-	EMUSuffix = suffix
+	mu.Lock()
+	defer mu.Unlock()
+	emuSuffix = suffix
 	anonRE = compileAnon(suffix)
+}
+
+// EMUSuffix returns the currently configured EMU suffix.
+func EMUSuffix() string {
+	mu.RLock()
+	defer mu.RUnlock()
+	return emuSuffix
 }
 
 // Non-App bot actors seen firing crons (GitHub's web merge bot).
@@ -66,6 +77,8 @@ func IsService(login string) bool {
 
 // Class buckets a scheduled-run actor login by account durability.
 func Class(login string) string {
+	mu.RLock()
+	defer mu.RUnlock()
 	switch {
 	case login == "":
 		return "none"
@@ -75,7 +88,7 @@ func Class(login string) string {
 		return "service"
 	case anonRE.MatchString(login):
 		return "deprovisioned"
-	case strings.HasSuffix(login, EMUSuffix):
+	case strings.HasSuffix(login, emuSuffix):
 		return "human"
 	default:
 		return "external"

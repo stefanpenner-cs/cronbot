@@ -8,8 +8,8 @@ import (
 	"sort"
 	"time"
 
-	"fixcron/internal/cronsched"
-	"fixcron/internal/inventory"
+	"cronbot/internal/cronsched"
+	"cronbot/internal/inventory"
 )
 
 // File is a workflow file collapsed from its (possibly several) cron lines.

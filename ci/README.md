@@ -81,7 +81,8 @@ A human who edits a cron directly hits the identity gate and is sent here.
   can check the commit author.
 - The merge must be squash or merge-commit, never rebase, or the bot does not
   become the actor.
-- One landing step in `.github/workflows/cron-intake.yml` is a marked TODO:
-  choose to merge the developer's existing PR as the App (simplest), or have the
-  App author the workflow. Pick one for your environment.
+- The identity gate binary (cronguard) is built from the cronbot repo, NOT from
+  the target repo's checkout. This prevents a malicious fork PR from supplying
+  its own gate binary. For production, pin the cronbot checkout to a release
+  tag SHA instead of `main`.
 - A repo admin with bypass can still force a cron in. deadman + rehome catch it.

@@ -9,11 +9,17 @@ body:
   - type: markdown
     attributes:
       value: |
-        Humans cannot merge cron changes directly (the identity-gate check
-        blocks them). File this request; the cron-reviewers crew
-        signs off; cron-bot lands the change so the bot is the durable owner.
+        Humans cannot merge cron changes directly (the identity gate blocks
+        them). File this request and cron-bot handles the rest:
 
-        The owning team is fixed (cron-reviewers) and is not a field.
+        1. 🤖 Bot validates your request and comments back
+        2. 👥 `cron-reviewers` signs off
+        3. 🚀 `cron-bot[bot]` lands the cron (you get progress updates)
+        4. ✅ Done — the cron is durable and bot-owned
+
+        Track the status via labels: `cron-valid` 🟢 → `cron-landing` 🟡 → `cron-landed` 🟢
+
+        The owning team is fixed (`cron-reviewers`) and is not a field.
   - type: input
     id: target-repository
     attributes:

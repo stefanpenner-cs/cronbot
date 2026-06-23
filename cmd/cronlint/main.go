@@ -31,16 +31,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"fixcron/internal/cronlint"
+	"cronbot/internal/cronlint"
+	"cronbot/internal/flagutil"
 )
-
-type stringList []string
-
-func (s *stringList) String() string { return strings.Join(*s, ",") }
-func (s *stringList) Set(v string) error {
-	*s = append(*s, v)
-	return nil
-}
 
 func main() {
 	banAll := flag.Bool("ban-all", false, "reject every cron (allow-list still exempts)")
@@ -48,7 +41,7 @@ func main() {
 	dir := flag.String("dir", "", "walk this tree for .github/workflows/*.y{a,}ml instead of taking file args")
 	jsonOut := flag.String("json-out", "", "write violations as JSON to this path")
 	listTouched := flag.Bool("list-touched", false, "print cron-bearing files (one per line) and exit 0; the cron-bot bot-merge signal")
-	var allow stringList
+	var allow flagutil.StringList
 	flag.Var(&allow, "allow", "glob of exempt paths; repeatable (** spans directories)")
 	flag.Parse()
 
@@ -88,7 +81,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, "marshal:", err)
 			os.Exit(2)
 		}
-		if err := os.WriteFile(*jsonOut, b, 0o644); err != nil {
+		if err := os.WriteFile(*jsonOut, append(b, '\n'), 0o644); err != nil {
 			fmt.Fprintln(os.Stderr, "write:", err)
 			os.Exit(2)
 		}
@@ -128,14 +121,15 @@ func collectPaths(dir string, args []string) ([]fileRef, error) {
 		if ext != ".yml" && ext != ".yaml" {
 			return nil
 		}
-		if !strings.Contains(filepath.ToSlash(p), ".github/workflows/") {
-			return nil
-		}
 		rel, err := filepath.Rel(dir, p)
 		if err != nil {
 			return err
 		}
-		out = append(out, fileRef{disk: p, logical: filepath.ToSlash(rel)})
+		slashRel := filepath.ToSlash(rel)
+		if !strings.HasPrefix(slashRel, ".github/workflows/") {
+			return nil
+		}
+		out = append(out, fileRef{disk: p, logical: slashRel})
 		return nil
 	})
 	return out, err

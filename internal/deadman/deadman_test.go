@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"fixcron/internal/inventory"
+	"cronbot/internal/inventory"
 )
 
 var now = time.Date(2026, 6, 18, 0, 0, 0, 0, time.UTC)

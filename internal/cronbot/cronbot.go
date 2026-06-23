@@ -11,10 +11,10 @@ import (
 	"regexp"
 	"strings"
 
-	"fixcron/internal/cronequiv"
-	"fixcron/internal/intake"
-	"fixcron/internal/registry"
-	"fixcron/internal/rehome"
+	"cronbot/internal/cronequiv"
+	"cronbot/internal/intake"
+	"cronbot/internal/registry"
+	"cronbot/internal/rehome"
 )
 
 // OwnerTeam is the single team accountable for every managed cron and the only

@@ -29,7 +29,7 @@ var headerField = map[string]func(*CronRequest, string){
 }
 
 var repoRE = regexp.MustCompile(`^[^/\s]+/[^/\s]+$`)
-var workflowRE = regexp.MustCompile(`^\.github/workflows/[^/]+\.ya?ml$`)
+var workflowRE = regexp.MustCompile(`^\.github/workflows/.+\.ya?ml$`)
 
 // Parse reads an issue-form body into a CronRequest. Unknown sections are
 // ignored; "_No response_" becomes empty.

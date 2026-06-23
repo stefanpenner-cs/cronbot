@@ -51,6 +51,10 @@ func IntervalDays(expr string) float64 {
 		return 30.4 // monthly
 	}
 	if dow != "*" { // specific weekday(s)
+		if rest, ok := strings.CutPrefix(dow, "*/"); ok && allDigits(rest) {
+			n, _ := strconv.Atoi(rest)
+			return 7.0 / float64(max(1, n))
+		}
 		if strings.Contains(dow, "-") && !strings.Contains(dow, ",") {
 			a, b, _ := strings.Cut(dow, "-")
 			if allDigits(a) && allDigits(b) {

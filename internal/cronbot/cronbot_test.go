@@ -3,7 +3,7 @@ package cronbot
 import (
 	"testing"
 
-	"fixcron/internal/intake"
+	"cronbot/internal/intake"
 )
 
 func req() intake.CronRequest {

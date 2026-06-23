@@ -1,7 +1,7 @@
 name: cron-policy
 description: >-
   Block scheduled workflows (cron) that are not registered or allow-listed.
-  Runs the fix-cron cronlint check over the calling repository.
+  Runs the cronbot cronlint check over the calling repository.
 
 inputs:
   registry:

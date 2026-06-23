@@ -20,6 +20,8 @@ func TestIntervalDays(t *testing.T) {
 		{"0 9 * * 1", 7.0},         // weekly
 		{"0 9 * * 1-5", 7.0 / 5.0}, // Mon-Fri
 		{"0 9 * * 1,4", 7.0 / 2.0},
+		{"0 9 * * */2", 7.0 / 2.0}, // every 2nd day
+		{"0 9 * * */3", 7.0 / 3.0}, // every 3rd day
 		{"0 9 1 * *", 30.4},  // monthly
 		{"0 9 */3 * *", 3.0}, // every 3 days
 		{"not a cron", 1.0},

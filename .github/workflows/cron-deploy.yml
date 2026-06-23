@@ -1,0 +1,67 @@
+# Deploy workflow: runs when a PR that changes registry.json is merged to main.
+#
+# Every step is a single CLI call. No inline bash logic, no jq, no sed.
+# The cron-deploy CLI does: diff old vs new → for each change: clone, cronapply,
+# commit, push, PR, auto-merge → record deployment status.
+name: cron-deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'registry.json'
+
+permissions:
+  contents: read
+  pull-requests: write
+  deployments: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        if: vars.CRON_APP_ID != ''
+        with:
+          app-id: ${{ vars.CRON_APP_ID }}
+          private-key: ${{ secrets.CRON_APP_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Set deploy token
+        id: token
+        run: |
+          TOKEN="${{ steps.app-token.outputs.token || secrets.DEPLOY_TOKEN }}"
+          if [ -z "$TOKEN" ]; then echo "has_token=false" >> "$GITHUB_OUTPUT"; else echo "has_token=true" >> "$GITHUB_OUTPUT"; echo "DEPLOY_TOKEN=$TOKEN" >> "$GITHUB_ENV"; fi
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Find merged PR number
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: go run ./cmd/cronmerge --repo "${{ github.repository }}" --head-sha "${{ github.sha }}" --output /tmp/pr-number.txt && echo "number=$(cat /tmp/pr-number.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Notify token needed
+        if: steps.token.outputs.has_token != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: go run ./cmd/cron-comment --type token-needed --pr-number "${{ steps.pr.outputs.number }}" --repo "${{ github.repository }}"
+
+      - name: Deploy to target repos
+        if: steps.token.outputs.has_token == 'true'
+        run: go run ./cmd/cron-deploy --old /tmp/empty.json --new registry.json --repo "${{ github.repository }}" --pr-number "${{ steps.pr.outputs.number }}" --git-name "cron-bot[bot]" --git-email "cron-bot[bot]@users.noreply.github.com" --output /tmp/deploy-result.json
+        env:
+          GH_TOKEN: ${{ env.DEPLOY_TOKEN }}
+      - name: Label and comment based on result
+        if: steps.token.outputs.has_token == 'true'
+        run: go run ./cmd/cron-postdeploy --result /tmp/deploy-result.json --repo "${{ github.repository }}" --pr-number "${{ steps.pr.outputs.number }}"
+        env:
+          GH_TOKEN: ${{ env.DEPLOY_TOKEN }}

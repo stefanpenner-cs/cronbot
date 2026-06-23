@@ -1,0 +1,62 @@
+# PR checks for registry.json changes.
+#
+# Every step is a single CLI call. No inline bash logic, no jq, no sed.
+name: cron-pr-checks
+
+on:
+  pull_request:
+    paths:
+      - 'registry.json'
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  ensure-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh label create "cron-valid"   --color 0E8A16 --description "Registry change checks out" --force || true
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh label create "cron-invalid" --color B60205 --description "Errors to fix"              --force || true
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh label create "deploying"    --color FBCA04 --description "Deploy in progress"        --force || true
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh label create "deployed"     --color 0E8A16 --description "Deploy complete"           --force || true
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh label create "deploy-failed" --color B60205 --description "Deploy failed"            --force || true
+
+  validate:
+    needs: ensure-labels
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build cron-pr-check
+        run: go build -o /tmp/cron-pr-check ./cmd/cron-pr-check
+      - name: Run cron-pr-check (validate + diff + build comment)
+        id: check
+        run: /tmp/cron-pr-check --registry registry.json --base-ref origin/${{ github.base_ref }} --output comment.md
+      - name: Post comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --body-file comment.md
+      - name: Label valid
+        if: steps.check.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr edit "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --remove-label "cron-invalid" --add-label "cron-valid"
+      - name: Label invalid
+        if: steps.check.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr edit "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --remove-label "cron-valid" --add-label "cron-invalid"

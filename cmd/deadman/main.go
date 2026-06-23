@@ -7,11 +7,13 @@
 //	data/cron/octo-org/crons.json      (scripts/cron_inventory.py)
 //	data/cron/octo-org/last_runs.json  (scripts/cron_last_runs.py)
 //
-// Usage (run from the fix-cron/ module directory):
+// Usage (run from the repo root):
 //
 //	go run ./cmd/deadman
-//	go run ./cmd/deadman --json-out ../reports/cron/deadman.json
+//	go run ./cmd/deadman --json-out reports/cron/deadman.json
 //	go run ./cmd/deadman --all   # include healthy crons in JSON
+//
+// Exit codes: 0 = report generated, 2 = usage/IO error.
 package main
 
 import (
@@ -21,13 +23,13 @@ import (
 	"os"
 	"time"
 
-	"fixcron/internal/deadman"
-	"fixcron/internal/inventory"
+	"cronbot/internal/deadman"
+	"cronbot/internal/inventory"
 )
 
 func main() {
-	cronsPath := flag.String("crons", "../data/cron/octo-org/crons.json", "crons.json path")
-	lastRunsPath := flag.String("last-runs", "../data/cron/octo-org/last_runs.json", "last_runs.json path")
+	cronsPath := flag.String("crons", "data/cron/octo-org/crons.json", "crons.json path")
+	lastRunsPath := flag.String("last-runs", "data/cron/octo-org/last_runs.json", "last_runs.json path")
 	jsonOut := flag.String("json-out", "", "write the report rows as JSON to this path")
 	all := flag.Bool("all", false, "include healthy crons in the JSON output")
 	flag.Parse()
@@ -35,12 +37,12 @@ func main() {
 	crons, err := inventory.LoadCrons(*cronsPath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "load crons:", err)
-		os.Exit(1)
+		os.Exit(2)
 	}
 	lastRuns, err := inventory.LoadLastRuns(*lastRunsPath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "load last_runs:", err)
-		os.Exit(1)
+		os.Exit(2)
 	}
 
 	rows := deadman.Assess(deadman.CollapseFiles(crons), lastRuns, time.Now().UTC())
@@ -55,11 +57,11 @@ func main() {
 		b, err := json.MarshalIndent(payload, "", "  ")
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "marshal:", err)
-			os.Exit(1)
+			os.Exit(2)
 		}
-		if err := os.WriteFile(*jsonOut, b, 0o644); err != nil {
+		if err := os.WriteFile(*jsonOut, append(b, '\n'), 0o644); err != nil {
 			fmt.Fprintln(os.Stderr, "write:", err)
-			os.Exit(1)
+			os.Exit(2)
 		}
 		fmt.Fprintf(os.Stderr, "\nwrote %d rows -> %s\n", len(payload), *jsonOut)
 	}

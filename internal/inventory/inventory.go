@@ -6,10 +6,12 @@ package inventory
 import (
 	"encoding/json"
 	"os"
+
+	"cronbot/internal/key"
 )
 
 // Cron is one row of crons.json (one per cron expression). Only the fields the
-// fix-cron tools use are modeled; extra JSON keys are ignored.
+// cronbot tools use are modeled; extra JSON keys are ignored.
 type Cron struct {
 	Repo           string `json:"repo"`
 	Path           string `json:"path"`
@@ -30,7 +32,7 @@ type RunEvidence struct {
 }
 
 // Key is the last_runs.json map key for a workflow file.
-func Key(repo, path string) string { return repo + "::" + path }
+func Key(repo, path string) string { return key.Cron(repo, path) }
 
 // LoadCrons reads and parses a crons.json file.
 func LoadCrons(path string) ([]Cron, error) {

@@ -57,4 +57,26 @@ func TestSetEMUSuffix(t *testing.T) {
 	if got := Class("a1b2c3d4e5f600112233_acme"); got != "deprovisioned" {
 		t.Errorf("anon hash + new suffix should be deprovisioned, got %q", got)
 	}
+	if got := EMUSuffix(); got != "_acme" {
+		t.Errorf("EMUSuffix() = %q, want _acme", got)
+	}
+}
+
+func TestSetEMUSuffixConcurrentSafe(t *testing.T) {
+	defer SetEMUSuffix("_EMU")
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for i := 0; i < 200; i++ {
+			SetEMUSuffix("_acme")
+			Class("jdoe_acme")
+			Class("jdoe_EMU")
+		}
+	}()
+	for i := 0; i < 200; i++ {
+		SetEMUSuffix("_EMU")
+		Class("jdoe_EMU")
+		Class("jdoe_acme")
+	}
+	<-done
 }

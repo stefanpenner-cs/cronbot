@@ -56,6 +56,17 @@ func TestValidateBad(t *testing.T) {
 	}
 }
 
+func TestValidateAllowsNestedWorkflowPaths(t *testing.T) {
+	ok := CronRequest{
+		Repo: "octo-org/foo",
+		Path: ".github/workflows/sub/nightly.yml", // nested path
+		Expr: "0 9 * * *",
+	}
+	if errs := ok.Validate(); len(errs) != 0 {
+		t.Fatalf("nested workflow path should be valid, got %v", errs)
+	}
+}
+
 func TestValidateRemovalRequiresRepoPathReason(t *testing.T) {
 	ok := CronRequest{
 		Repo: "octo-org/foo", Path: ".github/workflows/nightly.yml",

@@ -15,6 +15,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -22,22 +23,15 @@ import (
 	"os/exec"
 	"strings"
 
-	"fixcron/internal/cronguard"
+	"cronbot/internal/cronguard"
+	"cronbot/internal/flagutil"
 )
-
-type stringList []string
-
-func (s *stringList) String() string { return strings.Join(*s, ",") }
-func (s *stringList) Set(v string) error {
-	*s = append(*s, v)
-	return nil
-}
 
 func main() {
 	actor := flag.String("actor", "", "PR author login (github.event.pull_request.user.login)")
 	base := flag.String("base", "", "git ref of the PR base (e.g. origin/main)")
 	jsonOut := flag.String("json-out", "", "write violations as JSON to this path")
-	var allow stringList
+	var allow flagutil.StringList
 	flag.Var(&allow, "allow-actor", "actor allowed to change crons; repeatable (default cron-bot[bot])")
 	flag.Parse()
 
@@ -53,9 +47,14 @@ func main() {
 			fmt.Fprintln(os.Stderr, "read head:", err)
 			os.Exit(2)
 		}
+		base, err := gitShow(*base, path)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "git show base:", err)
+			os.Exit(2)
+		}
 		diffs = append(diffs, cronguard.FileDiff{
 			Path: path,
-			Base: gitShow(*base, path),
+			Base: base,
 			Head: string(head),
 		})
 	}
@@ -80,15 +79,24 @@ func main() {
 	}
 }
 
-// gitShow returns the file content at base:path, or "" if it did not exist
-// there (a new file) or base is unset.
-func gitShow(base, path string) string {
+// gitShow returns the file content at base:path. It returns ("", nil) when the
+// file did not exist at base (a new file). A git error (bad ref, missing repo,
+// etc.) is returned as an error so the caller can fail loudly instead of
+// silently treating every file as newly added.
+func gitShow(base, path string) (string, error) {
 	if base == "" {
-		return ""
+		return "", nil
 	}
-	out, err := exec.Command("git", "show", base+":"+path).Output()
+	cmd := exec.Command("git", "show", base+":"+path)
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
 	if err != nil {
-		return ""
+		msg := stderr.String()
+		if strings.Contains(msg, "does not exist") || strings.Contains(msg, "exists on disk") {
+			return "", nil
+		}
+		return "", fmt.Errorf("git show %s:%s: %w: %s", base, path, err, strings.TrimSpace(msg))
 	}
-	return string(out)
+	return string(out), nil
 }
